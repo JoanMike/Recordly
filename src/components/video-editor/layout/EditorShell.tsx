@@ -1,4 +1,3 @@
-import { OnboardingController } from "@/components/auth/OnboardingController";
 import { AccountProfileContext } from "@/components/ui/account-avatar";
 import { DashboardSettingsContext } from "../dashboard/DashboardSettings";
 import { RecordlySignInDialog, type SignInReason } from "@/components/auth/RecordlySignInDialog";
@@ -58,8 +57,6 @@ type Props = {
 };
 
 export function EditorShell(props: Props) {
-	const [onboardingRequest, setOnboardingRequest] = useState(0);
-	const showOnboarding = useCallback(() => setOnboardingRequest((value) => value + 1), []);
 	const [signInOpen, setSignInOpen] = useState(false);
 	const [signInReason, setSignInReason] = useState<SignInReason>("account");
 	const [shareRequestNonce, setShareRequestNonce] = useState(0);
@@ -143,23 +140,13 @@ export function EditorShell(props: Props) {
 			<SettingsPanel
 				{...settingsPanelProps}
 				accountUser={auth.user}
-				onShowOnboarding={showOnboarding}
 				activeEffectSection="settings"
 				selectedAnnotationId={null}
 				selectedClipId={null}
 				advanced
 			/>
 		),
-		[settingsPanelProps, showOnboarding, auth.user],
-	);
-	const onboarding = (
-		<OnboardingController
-			requestNonce={onboardingRequest}
-			ready={!project.loading && !auth.loading}
-			user={auth.user}
-			configured={auth.configured}
-			callbackError={auth.callbackError}
-		/>
+		[settingsPanelProps, auth.user],
 	);
 	const editorDialogs = (
 		<AccountProfileContext.Provider value={auth.user}>
@@ -220,7 +207,6 @@ export function EditorShell(props: Props) {
 					onAuthenticated={handleAuthenticated}
 				/>
 				{editorDialogs}
-				{onboarding}
 				<Toaster className="pointer-events-auto" />
 			</>
 		);
@@ -251,7 +237,6 @@ export function EditorShell(props: Props) {
 					onAuthenticated={handleAuthenticated}
 				/>
 				{editorDialogs}
-				{onboarding}
 				<Toaster className="pointer-events-auto" />
 			</div>
 		);
@@ -365,7 +350,6 @@ export function EditorShell(props: Props) {
 						settingsPanelProps={{
 							...settingsPanelProps,
 							accountUser: auth.user,
-							onShowOnboarding: showOnboarding,
 						}}
 					/>
 					<EditorPreviewPanel
@@ -459,7 +443,6 @@ export function EditorShell(props: Props) {
 				onAuthenticated={handleAuthenticated}
 			/>
 			{editorDialogs}
-			{onboarding}
 			<CropEditorDialog
 				open={ui.showCropModal}
 				t={t}

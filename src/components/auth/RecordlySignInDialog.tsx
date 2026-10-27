@@ -1,16 +1,9 @@
-import { ArrowRight, GithubLogo } from "@phosphor-icons/react";
-import { OnboardingPermissions } from "./OnboardingPermissions";
-import {
-	OnboardingBody,
-	OnboardingFooter,
-	OnboardingHeader,
-	OnboardingLayout,
-} from "./OnboardingLayout";
+import { GithubLogo } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useI18n } from "@/contexts/I18nContext";
 import { SignOut } from "@/components/ui/icons";
 import type { User } from "@supabase/supabase-js";
-import { Fragment, type FormEvent, useEffect, useState, useRef } from "react";
+import { type FormEvent, useEffect, useState, useRef } from "react";
 import {
 	Modal,
 	Button,
@@ -37,8 +30,6 @@ export type SignInReason = "account" | "share";
 
 type Props = {
 	variant?: "compact" | "wide";
-	onboarding?: boolean;
-	startWithPermissions?: boolean;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	reason?: SignInReason;
@@ -67,8 +58,6 @@ function friendlyAuthError(
 
 export function RecordlySignInDialog({
 	variant = "compact",
-	onboarding = false,
-	startWithPermissions = false,
 	open,
 	onOpenChange,
 	user,
@@ -78,10 +67,7 @@ export function RecordlySignInDialog({
 }: Props) {
 	const { t } = useI18n();
 	const awaitingSignIn = useRef(false);
-	const wide = onboarding || variant === "wide";
-	const [showPermissions, setShowPermissions] = useState(false);
-	const requiresSignIn = onboarding && !user;
-	const permissions = onboarding && Boolean(user) && showPermissions;
+	const wide = variant === "wide";
 	const [email, setEmail] = useState("");
 	const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 	const [busy, setBusy] = useState<string>();
@@ -124,7 +110,6 @@ export function RecordlySignInDialog({
 
 	useEffect(() => {
 		if (!open) {
-			setShowPermissions(false);
 			awaitingSignIn.current = false;
 			setBusy(undefined);
 			setMessage(undefined);
@@ -133,19 +118,14 @@ export function RecordlySignInDialog({
 	}, [open]);
 
 	useEffect(() => {
-		if (open && startWithPermissions && user) setShowPermissions(true);
-	}, [open, startWithPermissions, user]);
-
-	useEffect(() => {
 		if (!open) return;
 		if (!user) awaitingSignIn.current = true;
 		else if (awaitingSignIn.current) {
 			awaitingSignIn.current = false;
 			setMessage(undefined);
-			if (onboarding) setShowPermissions(true);
-			else onAuthenticated();
+			onAuthenticated();
 		}
-	}, [open, user, onAuthenticated, onboarding]);
+	}, [open, user, onAuthenticated]);
 
 	const run = async (label: string, action: () => Promise<unknown>) => {
 		setBusy(label);
@@ -183,364 +163,223 @@ export function RecordlySignInDialog({
 	const reduceMotion = useReducedMotion();
 	const transition = { duration: reduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] as const };
 	const reveal = {
-		initial: { opacity: 0, y: reduceMotion || onboarding ? 0 : 10 },
+		initial: { opacity: 0, y: reduceMotion ? 0 : 10 },
 		animate: { opacity: 1, y: 0 },
 		transition,
 	};
-	const carouselMotion = {
-		enter: (direction: number) => ({
-			opacity: reduceMotion ? 1 : 0,
-			x: reduceMotion ? 0 : direction * 32,
-		}),
-		center: { opacity: 1, x: 0 },
-		exit: (direction: number) => ({
-			opacity: reduceMotion ? 1 : 0,
-			x: reduceMotion ? 0 : direction * -32,
-			transition: { ...transition, duration: reduceMotion ? 0 : 0.18 },
-		}),
-	};
 	const disabled = Boolean(busy);
 	const artwork = `${import.meta.env.BASE_URL}auth/login-banner.png`;
-	const SignInBody = onboarding ? OnboardingBody : Fragment;
 	const signInContent = (
 		<motion.div
-			layout={onboarding ? false : "position"}
+			layout="position"
 			transition={transition}
-			className={
-				onboarding
-					? "flex h-full min-h-0 flex-col"
-					: `flex flex-1 flex-col justify-center px-5 py-6 sm:px-8 ${wide ? "md:order-1 md:min-w-0" : ""}`
-			}
+			className={`flex flex-1 flex-col justify-center px-5 py-6 sm:px-8 ${wide ? "md:order-1 md:min-w-0" : ""}`}
 		>
-			<SignInBody>
-				<div
-					className={
-						onboarding
-							? "space-y-6 @container"
-							: "w-full max-w-[420px] self-center space-y-4 @container"
-					}
-				>
-					<motion.div {...reveal}>
-						{onboarding ? (
-							<OnboardingHeader
-								centered={!user}
-								showBrand={Boolean(user)}
-								title={
-									user ? (
-										"Your account"
-									) : (
-										<>
-											Welcome to{" "}
-											<span className="inline-flex items-center gap-2 whitespace-nowrap align-bottom">
-												<img
-													src={`${import.meta.env.BASE_URL}app-icons/recordly-128.png`}
-													alt=""
-													className="size-7 rounded-lg sm:size-8"
-												/>
-												Recordly
-											</span>
-										</>
-									)
-								}
-								description={
-									user
-										? user.email || "You’re signed in and ready to continue."
-										: "Sign in to Recordly to start recording, save your work and share it."
-								}
+			<div className="w-full max-w-[420px] self-center space-y-4 @container">
+				<motion.div {...reveal}>
+					<Modal.Header className="items-center gap-3 text-center">
+						<div className="flex items-center gap-3" aria-label="Recordly">
+							<img
+								src={`${import.meta.env.BASE_URL}app-icons/recordly-128.png`}
+								alt=""
+								className="size-12 rounded-xl"
 							/>
-						) : (
-							<Modal.Header className="items-center gap-3 text-center">
-								<div className="flex items-center gap-3" aria-label="Recordly">
-									<img
-										src={`${import.meta.env.BASE_URL}app-icons/recordly-128.png`}
-										alt=""
-										className="size-12 rounded-xl"
-									/>
-									<span className="text-3xl font-semibold tracking-tight">
-										Recordly
-									</span>
-								</div>
-								<Modal.Heading className="whitespace-nowrap text-[clamp(12px,5cqw,22px)] font-semibold leading-tight tracking-tight">
-									{user
-										? "Your account"
-										: "Beautiful, shareable screen recordings"}
-								</Modal.Heading>
-								<Description className="text-sm">
-									{user ? user.email : "Sign in to get started"}
-								</Description>
-							</Modal.Header>
-						)}
-					</motion.div>
-					{user && onboarding ? null : user ? (
-						<Button
-							variant="secondary"
-							className="w-full"
-							isDisabled={disabled}
-							onPress={() =>
-								void run("signout", async () => {
-									await signOutRecordly();
-									onOpenChange(false);
-								})
-							}
-						>
-							<SignOut className="size-4" />
-							{busy === "signout"
-								? t("editor.cloud.signingOut")
-								: t("editor.cloud.signOut")}
-						</Button>
-					) : (
-						<>
-							{loadingProviders ? (
-								<div
-									role="status"
-									aria-label="Loading sign-in options"
-									className="h-11 rounded-xl bg-surface-secondary"
-								/>
-							) : providers.length > 0 ? (
-								<motion.div
-									{...reveal}
-									transition={{
-										...transition,
-										delay: reduceMotion ? 0 : 0.05,
-									}}
-									className="flex gap-2"
-								>
-									{(
-										[
-											{
-												provider: "google",
-												label: "Google",
-												image: "google-logo.png",
-											},
-											{
-												provider: "azure",
-												label: "Microsoft",
-												image: "microsoft-logo.svg",
-											},
-											{
-												provider: "github",
-												label: "GitHub",
-												image: null,
-											},
-										] as const
-									)
-										.filter(({ provider }) => providers.includes(provider))
-										.map(({ provider, label, image }) => (
-											<Button
-												key={provider}
-												variant="secondary"
-												aria-label={`Continue with ${label}`}
-												className="h-11 w-full min-w-0 gap-2 rounded-xl px-2 text-xs font-medium text-foreground @[360px]:text-sm"
-												isDisabled={disabled || !configured}
-												onPress={() =>
-													void run(provider, () =>
-														signInWithSocial(provider),
-													)
-												}
-											>
-												{image ? (
-													<img
-														src={`${import.meta.env.BASE_URL}auth/${image}`}
-														alt=""
-														className="size-4 shrink-0"
-													/>
-												) : (
-													<GithubLogo
-														aria-hidden="true"
-														weight="fill"
-														className="size-4 shrink-0"
-													/>
-												)}
-												{label}
-											</Button>
-										))}
-								</motion.div>
-							) : null}
-							{(loadingProviders || providers.length > 0) && (
-								<div className="flex items-center gap-4">
-									<Separator className="flex-1" />
-									<span className="text-xs text-muted">
-										or continue with email
-									</span>
-									<Separator className="flex-1" />
-								</div>
-							)}
-							<Form className="flex flex-col" onSubmit={submitEmail}>
-								<TextField
-									name="email"
-									type="email"
-									value={email}
-									onChange={(value) => {
-										setEmail(value);
-										setLinkSent(false);
-										setMessage(undefined);
-									}}
-									isRequired
-									isDisabled={disabled}
-								>
-									<Label>Email</Label>
-									<Input
-										className={onboarding ? "h-11" : "h-12"}
-										placeholder="you@example.com"
-										autoComplete="email"
-									/>
-									<FieldError />
-								</TextField>
-								<AnimatePresence initial={false}>
-									{validEmail && (
-										<motion.div
-											key="magic-link"
-											initial={{
-												height: 0,
-												opacity: 0,
-												y: reduceMotion ? 0 : -6,
-											}}
-											animate={{ height: "auto", opacity: 1, y: 0 }}
-											exit={{
-												height: 0,
-												opacity: 0,
-												y: reduceMotion ? 0 : -6,
-											}}
-											transition={transition}
-											className="w-full overflow-hidden"
+							<span className="text-3xl font-semibold tracking-tight">Recordly</span>
+						</div>
+						<Modal.Heading className="whitespace-nowrap text-[clamp(12px,5cqw,22px)] font-semibold leading-tight tracking-tight">
+							{user ? "Your account" : "Beautiful, shareable screen recordings"}
+						</Modal.Heading>
+						<Description className="text-sm">
+							{user ? user.email : "Sign in to get started"}
+						</Description>
+					</Modal.Header>
+				</motion.div>
+				{user ? (
+					<Button
+						variant="secondary"
+						className="w-full"
+						isDisabled={disabled}
+						onPress={() =>
+							void run("signout", async () => {
+								await signOutRecordly();
+								onOpenChange(false);
+							})
+						}
+					>
+						<SignOut className="size-4" />
+						{busy === "signout"
+							? t("editor.cloud.signingOut")
+							: t("editor.cloud.signOut")}
+					</Button>
+				) : (
+					<>
+						{loadingProviders ? (
+							<div
+								role="status"
+								aria-label="Loading sign-in options"
+								className="h-11 rounded-xl bg-surface-secondary"
+							/>
+						) : providers.length > 0 ? (
+							<motion.div
+								{...reveal}
+								transition={{
+									...transition,
+									delay: reduceMotion ? 0 : 0.05,
+								}}
+								className="flex gap-2"
+							>
+								{(
+									[
+										{
+											provider: "google",
+											label: "Google",
+											image: "google-logo.png",
+										},
+										{
+											provider: "azure",
+											label: "Microsoft",
+											image: "microsoft-logo.svg",
+										},
+										{
+											provider: "github",
+											label: "GitHub",
+											image: null,
+										},
+									] as const
+								)
+									.filter(({ provider }) => providers.includes(provider))
+									.map(({ provider, label, image }) => (
+										<Button
+											key={provider}
+											variant="secondary"
+											aria-label={`Continue with ${label}`}
+											className="h-11 w-full min-w-0 gap-2 rounded-xl px-2 text-xs font-medium text-foreground @[360px]:text-sm"
+											isDisabled={disabled || !configured}
+											onPress={() =>
+												void run(provider, () => signInWithSocial(provider))
+											}
 										>
-											<Button
-												type="submit"
-												variant="primary"
-												className={
-													onboarding
-														? "mt-3 h-11 w-full rounded-xl"
-														: "mt-3 h-12 w-full"
-												}
-												isDisabled={disabled || !configured}
-											>
-												{busy === "link"
-													? "Sending sign-in link…"
-													: "Email me a magic link"}
-											</Button>
-										</motion.div>
-									)}
-								</AnimatePresence>
-							</Form>
-						</>
-					)}
-					{message ? (
-						<Alert status={linkSent ? "success" : "danger"}>
-							<Alert.Indicator />
-							<Alert.Content>
-								<Alert.Description>{message}</Alert.Description>
-							</Alert.Content>
-						</Alert>
-					) : null}
-					{!configured && !user && (
-						<Description role="status">{t("editor.cloud.unavailable")}</Description>
-					)}
-				</div>
-			</SignInBody>
-			{onboarding && user && (
-				<OnboardingFooter>
-					<div className="flex w-full justify-end">
-						<Button
-							variant="primary"
-							isDisabled={disabled}
-							onPress={() => setShowPermissions(true)}
-						>
-							Continue <ArrowRight size={16} />
-						</Button>
-					</div>
-				</OnboardingFooter>
-			)}
+											{image ? (
+												<img
+													src={`${import.meta.env.BASE_URL}auth/${image}`}
+													alt=""
+													className="size-4 shrink-0"
+												/>
+											) : (
+												<GithubLogo
+													aria-hidden="true"
+													weight="fill"
+													className="size-4 shrink-0"
+												/>
+											)}
+											{label}
+										</Button>
+									))}
+							</motion.div>
+						) : null}
+						{(loadingProviders || providers.length > 0) && (
+							<div className="flex items-center gap-4">
+								<Separator className="flex-1" />
+								<span className="text-xs text-muted">or continue with email</span>
+								<Separator className="flex-1" />
+							</div>
+						)}
+						<Form className="flex flex-col" onSubmit={submitEmail}>
+							<TextField
+								name="email"
+								type="email"
+								value={email}
+								onChange={(value) => {
+									setEmail(value);
+									setLinkSent(false);
+									setMessage(undefined);
+								}}
+								isRequired
+								isDisabled={disabled}
+							>
+								<Label>Email</Label>
+								<Input
+									className="h-12"
+									placeholder="you@example.com"
+									autoComplete="email"
+								/>
+								<FieldError />
+							</TextField>
+							<AnimatePresence initial={false}>
+								{validEmail && (
+									<motion.div
+										key="magic-link"
+										initial={{
+											height: 0,
+											opacity: 0,
+											y: reduceMotion ? 0 : -6,
+										}}
+										animate={{ height: "auto", opacity: 1, y: 0 }}
+										exit={{
+											height: 0,
+											opacity: 0,
+											y: reduceMotion ? 0 : -6,
+										}}
+										transition={transition}
+										className="w-full overflow-hidden"
+									>
+										<Button
+											type="submit"
+											variant="primary"
+											className="mt-3 h-12 w-full"
+											isDisabled={disabled || !configured}
+										>
+											{busy === "link"
+												? "Sending sign-in link…"
+												: "Email me a magic link"}
+										</Button>
+									</motion.div>
+								)}
+							</AnimatePresence>
+						</Form>
+					</>
+				)}
+				{message ? (
+					<Alert status={linkSent ? "success" : "danger"}>
+						<Alert.Indicator />
+						<Alert.Content>
+							<Alert.Description>{message}</Alert.Description>
+						</Alert.Content>
+					</Alert>
+				) : null}
+				{!configured && !user && (
+					<Description role="status">{t("editor.cloud.unavailable")}</Description>
+				)}
+			</div>
 		</motion.div>
 	);
 	return (
-		<Modal
-			isOpen={open}
-			onOpenChange={(value) => {
-				if (value || !requiresSignIn) onOpenChange(value);
-			}}
-		>
-			<Modal.Backdrop
-				isDismissable={!requiresSignIn}
-				isKeyboardDismissDisabled={requiresSignIn}
-			>
-				<Modal.Container
-					size="cover"
-					placement="center"
-					className={onboarding ? "p-4" : "p-4 sm:p-8"}
-				>
+		<Modal isOpen={open} onOpenChange={onOpenChange}>
+			<Modal.Backdrop>
+				<Modal.Container size="cover" placement="center" className="p-4 sm:p-8">
 					<MotionDialog
-						layout={!onboarding}
+						layout
 						transition={transition}
-						aria-label={onboarding ? "Welcome to Recordly" : undefined}
-						data-onboarding-state={
-							onboarding ? (permissions ? "permissions" : "login") : undefined
-						}
-						className={
-							onboarding
-								? "h-[min(760px,calc(100dvh-32px))] min-h-0 w-full max-w-[720px] gap-0 overflow-hidden rounded-3xl p-0"
-								: `h-auto min-h-0 w-full max-h-[calc(100dvh-48px)] gap-0 overflow-y-auto rounded-[32px] p-2 ${wide ? "max-w-[1120px] md:grid md:grid-cols-2 md:aspect-[28/19]" : "max-w-[600px]"}`
-						}
+						className={`h-auto min-h-0 w-full max-h-[calc(100dvh-48px)] gap-0 overflow-y-auto rounded-[32px] p-2 ${wide ? "max-w-[1120px] md:grid md:grid-cols-2 md:aspect-[28/19]" : "max-w-[600px]"}`}
 					>
-						{onboarding ? (
-							<OnboardingLayout
-								stage={permissions ? "permissions" : "account"}
-								canViewPermissions={Boolean(user)}
-								onStageChange={(stage) =>
-									setShowPermissions(stage === "permissions" && Boolean(user))
+						<div
+							className={`relative shrink-0 overflow-hidden rounded-[24px] h-32 sm:h-36 ${wide ? "md:order-2 md:h-full md:min-h-0" : ""}`}
+						>
+							<img
+								src={
+									wide
+										? `${import.meta.env.BASE_URL}auth/login-side.png`
+										: artwork
 								}
-							>
-								<AnimatePresence
-									initial={false}
-									mode="wait"
-									custom={permissions ? 1 : -1}
-								>
-									<motion.div
-										key={permissions ? "permissions" : "account"}
-										custom={permissions ? 1 : -1}
-										variants={carouselMotion}
-										initial="enter"
-										animate="center"
-										exit="exit"
-										transition={transition}
-										className="flex h-full min-h-0 flex-col"
-									>
-										{permissions ? (
-											<OnboardingPermissions
-												onBack={() => setShowPermissions(false)}
-												onFinish={() => {
-													if (user) onAuthenticated();
-												}}
-											/>
-										) : (
-											signInContent
-										)}
-									</motion.div>
-								</AnimatePresence>
-							</OnboardingLayout>
-						) : (
-							<>
-								<div
-									className={`relative shrink-0 overflow-hidden rounded-[24px] h-32 sm:h-36 ${wide ? "md:order-2 md:h-full md:min-h-0" : ""}`}
-								>
-									<img
-										src={
-											wide
-												? `${import.meta.env.BASE_URL}auth/login-side.png`
-												: artwork
-										}
-										alt=""
-										className="absolute inset-0 size-full object-cover object-center"
-									/>
-								</div>
-								{signInContent}
-							</>
-						)}
-						{!requiresSignIn && (
-							<Modal.CloseTrigger
-								aria-label={t("common.actions.close")}
-								className="z-20"
+								alt=""
+								className="absolute inset-0 size-full object-cover object-center"
 							/>
-						)}
+						</div>
+						{signInContent}
+						<Modal.CloseTrigger
+							aria-label={t("common.actions.close")}
+							className="z-20"
+						/>
 					</MotionDialog>
 				</Modal.Container>
 			</Modal.Backdrop>

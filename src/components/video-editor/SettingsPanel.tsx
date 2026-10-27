@@ -423,7 +423,6 @@ function CursorClickEffectCards({
 
 interface SettingsPanelProps {
 	accountUser?: User | null;
-	onShowOnboarding?: () => void;
 	advanced?: boolean;
 	panelMode?: "editor" | "background";
 	activeEffectSection?: EditorEffectSection;
@@ -881,7 +880,6 @@ function CursorStylePreview({
 
 export function SettingsPanel({
 	accountUser = null,
-	onShowOnboarding,
 	advanced = false,
 	panelMode = "editor",
 	activeEffectSection: activeEffectSectionProp,
@@ -2265,17 +2263,9 @@ export function SettingsPanel({
 					<AccountSettings key={accountUser?.id ?? "signed-out"} user={accountUser} />
 				</SettingsCategory>
 				<SettingsCategory category="permissions">
-					<RecordingPermissionsSettings onReview={onShowOnboarding} />
+					<RecordingPermissionsSettings />
 				</SettingsCategory>
 				<SettingsCategory category="general">
-					{onShowOnboarding && (
-						<SettingsRow title="Onboarding">
-							<Button variant="secondary" size="sm" onClick={onShowOnboarding}>
-								Show onboarding
-							</Button>
-						</SettingsRow>
-					)}
-
 					<SettingsRow title={t("editor.theme.appearance", "Appearance")} stacked>
 						<ChoiceGroup
 							type="single"
