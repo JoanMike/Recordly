@@ -53,6 +53,22 @@ import { getCompanionAudioFallbackInfo } from "./diagnostics";
 const require = createRequire(import.meta.url);
 const ffmpeg = require("ffmpeg-static") as string;
 const run = promisify(execFile);
+
+// Windows only allows unprivileged symlinks with Developer Mode enabled. Skip
+// the symlink-exclusion assertions when the OS refuses to create one instead of
+// failing the whole suite on a permission the test cannot grant itself.
+async function createFileSymlink(target: string, linkPath: string) {
+	try {
+		await fs.symlink(target, linkPath);
+		return true;
+	} catch (error) {
+		const code = (error as NodeJS.ErrnoException).code;
+		if (process.platform === "win32" && (code === "EPERM" || code === "EACCES")) {
+			return false;
+		}
+		throw error;
+	}
+}
 beforeEach(async () => {
 	state.root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "recordly-library-")));
 	state.approved.clear();
@@ -62,7 +78,7 @@ afterEach(async () => {
 	await fs.rm(state.root, { recursive: true, force: true });
 });
 
-it("lists recordings, moves recordings and their companions to Trash with reversible removals, and excludes companion media and symlinks", async () => {
+it("lists recordings, moves recordings and their companions to Trash with reversible removals, and excludes companion media and symlinks", async (ctx) => {
 	const first = path.join(state.root, "recording-old.mp4");
 	const second = path.join(state.root, "recording-new.mov");
 	for (const name of [
@@ -72,7 +88,10 @@ it("lists recordings, moves recordings and their companions to Trash with revers
 		path.join(state.root, "recording-new.mic.wav"),
 	])
 		await fs.writeFile(name, "fixture");
-	await fs.symlink(first, path.join(state.root, "linked.mp4"));
+	if (!(await createFileSymlink(first, path.join(state.root, "linked.mp4")))) {
+		ctx.skip("symlinks require Developer Mode on Windows");
+		return;
+	}
 	expect((await listRecordings()).map((entry) => entry.path).sort()).toEqual(
 		[first, second].sort(),
 	);
@@ -328,10 +347,18 @@ it("restores on volumes without hard links and preserves conflicts", async () =>
 	}
 });
 
-it("Raw includes camera and audio sources without including metadata or symlinks", async () => {
+it("Raw includes camera and audio sources without including metadata or symlinks", async (ctx) => {
  const files = ["screen.mp4", "screen.webcam.mp4", "screen.mic.wav", "screen.system.m4a"];
  for (const name of [...files, "screen.cursor.json"]) await fs.writeFile(path.join(state.root, name), "fixture");
- await fs.symlink(path.join(state.root, "screen.mp4"), path.join(state.root, "linked.mp4"));
+ if (
+		!(await createFileSymlink(
+			path.join(state.root, "screen.mp4"),
+			path.join(state.root, "linked.mp4"),
+		))
+	) {
+		ctx.skip("symlinks require Developer Mode on Windows");
+		return;
+	}
  expect((await listRecordings(true)).map(entry => entry.name).sort()).toEqual(files.sort());
  expect((await listRecordings()).map(entry => entry.name)).toEqual(["screen.mp4"]);
 });
