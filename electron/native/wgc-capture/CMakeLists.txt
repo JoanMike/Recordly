@@ -12,7 +12,16 @@ add_executable(wgc-capture
   src/wasapi_loopback.cpp
 )
 
-target_compile_options(wgc-capture PRIVATE /EHsc /W3 /utf-8)
+target_compile_options(wgc-capture PRIVATE
+  /EHsc
+  /W3
+  /utf-8
+  # C++/WinRT still pulls <experimental/coroutine> through
+  # winrt/Windows.Foundation.h. MSVC 19.50+ (VS 2026) turns that deprecation
+  # into a hard error (STL1011), so the macro keeps the helper buildable on a
+  # current toolchain.
+  /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+)
 
 target_link_libraries(wgc-capture PRIVATE
   windowsapp

@@ -23,6 +23,8 @@ static std::atomic<int64_t> g_pauseStartTimestampHns{0};
 static std::atomic<int64_t> g_accumulatedPausedHns{0};
 static std::mutex g_stopMutex;
 static std::condition_variable g_stopCv;
+static std::atomic<uint64_t> g_pauseStateGeneration{0};
+static std::atomic<int64_t> g_pauseTransitionTimestampHns{0};
 
 static void reportMicrophoneCaptureUnavailable() {
     std::cerr << "WARNING: Failed to initialize WASAPI mic capture" << std::endl;
@@ -263,12 +265,26 @@ static void stdinListenerThread() {
         }
 
         if (line == "pause") {
-            openActivePauseAt(queryPerformanceCounterHns());
+            const int64_t transitionHns = queryPerformanceCounterHns();
+            openActivePauseAt(transitionHns);
+            g_pauseTransitionTimestampHns.store(transitionHns);
+            {
+                std::lock_guard<std::mutex> lock(g_stopMutex);
+                g_pauseStateGeneration.fetch_add(1);
+            }
+            g_stopCv.notify_all();
             continue;
         }
 
         if (line == "resume") {
-            closeActivePauseAt(queryPerformanceCounterHns());
+            const int64_t transitionHns = queryPerformanceCounterHns();
+            closeActivePauseAt(transitionHns);
+            g_pauseTransitionTimestampHns.store(transitionHns);
+            {
+                std::lock_guard<std::mutex> lock(g_stopMutex);
+                g_pauseStateGeneration.fetch_add(1);
+            }
+            g_stopCv.notify_all();
             continue;
         }
 
@@ -418,18 +434,31 @@ int main(int argc, char* argv[]) {
     }
     captureSetupComplete = true;
 
-    // Wait for stop signal while pausing/resuming audio tracks in lockstep.
+    // Wait for stop while keeping the audio tracks in lockstep with the video
+    // timeline. The stdin thread bumps g_pauseStateGeneration and wakes this
+    // loop, so the audio pause lands at the same QPC timestamp the video used
+    // instead of up to 20ms later on every pause (which accumulated as A/V
+    // drift across pause cycles).
+    bool audioPaused = false;
     while (!g_stopRequested && !session.hasFatalError()) {
-        if (g_pauseRequested) {
-            if (audioActive) loopback.pause();
-            if (micActive) micCapture.pause();
-        } else {
-            if (audioActive) loopback.resume();
-            if (micActive) micCapture.resume();
+        const bool pauseRequested = g_pauseRequested.load();
+        if (pauseRequested != audioPaused) {
+            const int64_t pauseTimestampHns = g_pauseTransitionTimestampHns.load();
+            if (pauseRequested) {
+                if (audioActive) loopback.pause(pauseTimestampHns);
+                if (micActive) micCapture.pause(pauseTimestampHns);
+            } else {
+                if (audioActive) loopback.resume(pauseTimestampHns);
+                if (micActive) micCapture.resume(pauseTimestampHns);
+            }
+            audioPaused = pauseRequested;
         }
 
         std::unique_lock<std::mutex> lock(g_stopMutex);
-        g_stopCv.wait_for(lock, std::chrono::milliseconds(20), [] { return g_stopRequested.load(); });
+        const uint64_t observedGeneration = g_pauseStateGeneration.load();
+        g_stopCv.wait_for(lock, std::chrono::milliseconds(250), [observedGeneration] {
+            return g_stopRequested.load() || g_pauseStateGeneration.load() != observedGeneration;
+        });
     }
 
     // Stop capture and finalize

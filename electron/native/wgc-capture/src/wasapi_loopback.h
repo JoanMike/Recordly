@@ -19,8 +19,10 @@ public:
         const std::string& deviceId = "",
         const std::string& deviceName = "");
     bool start();
-    bool pause();
-    bool resume();
+    // `atQpcHns` lets the caller pause/resume the audio timeline at the exact
+    // instant the video timeline paused, so repeated pause cycles do not drift.
+    bool pause(int64_t atQpcHns = 0);
+    bool resume(int64_t atQpcHns = 0);
     void stop();
     int64_t firstPacketQpcHns() const { return firstPacketQpcHns_.load(); }
     uint64_t capturedDurationMs() const;

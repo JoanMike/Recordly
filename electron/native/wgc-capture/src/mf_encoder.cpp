@@ -297,6 +297,25 @@ bool MFEncoder::extendLastFrameToLocked(int64_t timestampHns) {
         return true;
     }
 
+    // WGC stops delivering frames while the scene is static, so the gap has to
+    // be padded for a continuous timeline. Padding is not free though: every
+    // duplicate goes through a full NV12 memcpy + WriteSample, and a stalled or
+    // slow encoder turns that into a backlog that makes "stop" exceed the
+    // Electron-side 45s timeout (#961). Bound the padding per gap and let the
+    // sample timestamps jump for anything longer: players hold the last frame
+    // until the next keyframe, and the audio sidecars keep their own timeline.
+    const int64_t missingFrames = (timestampHns - lastSampleTimeHns_) / frameDurationHns;
+    const int64_t maxPaddedFrames = (std::max)(static_cast<int64_t>(1), static_cast<int64_t>(fps_));
+
+    if (missingFrames > maxPaddedFrames) {
+        std::cerr << "WARNING: Skipping " << missingFrames - 1
+                  << " padded frame(s) after a "
+                  << static_cast<double>(timestampHns - lastSampleTimeHns_) / 10000000.0
+                  << "s capture gap" << std::endl;
+        lastSampleTimeHns_ = timestampHns - frameDurationHns;
+        return true;
+    }
+
     int64_t nextSampleTimeHns = lastSampleTimeHns_ + frameDurationHns;
     while (nextSampleTimeHns + frameDurationHns <= timestampHns) {
         if (!writeNv12SampleLocked(lastFrameBuffer_, nextSampleTimeHns)) {

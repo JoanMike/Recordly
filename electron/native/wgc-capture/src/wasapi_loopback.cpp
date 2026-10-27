@@ -266,16 +266,16 @@ bool WasapiCapture::start() {
     return true;
 }
 
-bool WasapiCapture::pause() {
+bool WasapiCapture::pause(int64_t atQpcHns) {
     if (!capturing_ || paused_) return true;
-    pauseStartQpcHns_ = queryPerformanceCounterHns();
+    pauseStartQpcHns_ = atQpcHns > 0 ? atQpcHns : queryPerformanceCounterHns();
     paused_ = true;
     return audioClient_ ? SUCCEEDED(audioClient_->Stop()) : false;
 }
 
-bool WasapiCapture::resume() {
+bool WasapiCapture::resume(int64_t atQpcHns) {
     if (!capturing_ || !paused_) return true;
-    const int64_t resumedQpcHns = queryPerformanceCounterHns();
+    const int64_t resumedQpcHns = atQpcHns > 0 ? atQpcHns : queryPerformanceCounterHns();
     const int64_t pauseStartQpcHns = pauseStartQpcHns_.load();
     HRESULT hr = audioClient_ ? audioClient_->Start() : E_FAIL;
     if (FAILED(hr)) return false;
