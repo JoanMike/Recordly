@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
 	configureWithWindowsCmakeGenerator,
+	getWindowsCmakeGeneratorAttempts,
 	WINDOWS_CMAKE_GENERATORS,
 	WINDOWS_VISUAL_STUDIO_INSTALL_DIRS,
 } from "../scripts/windows-cmake-generators.mjs";
@@ -23,6 +24,32 @@ describe("configureWithWindowsCmakeGenerator", () => {
 		expect(clearCache).toHaveBeenCalledTimes(1);
 	});
 
+	it("retries the same generator with the default toolset when the pinned one is missing", () => {
+		const attempted = [];
+		const clearCache = vi.fn();
+		const log = vi.fn();
+
+		const selected = configureWithWindowsCmakeGenerator({
+			prefix: "test",
+			clearCache,
+			log,
+			configure: (generator, toolset) => {
+				attempted.push({ name: generator, toolset });
+				if (toolset) {
+					throw new Error(`toolset ${toolset} is not installed (MSB8020)`);
+				}
+			},
+		});
+
+		expect(selected).toBe("Visual Studio 18 2026");
+		expect(attempted).toEqual([
+			{ name: "Visual Studio 18 2026", toolset: "v143" },
+			{ name: "Visual Studio 18 2026", toolset: undefined },
+		]);
+		expect(clearCache).toHaveBeenCalledTimes(2);
+		expect(log).toHaveBeenCalledTimes(1);
+	});
+
 	it("falls back in supported-version order and clears stale CMake state", () => {
 		const attempted = [];
 		const clearCache = vi.fn();
@@ -41,10 +68,14 @@ describe("configureWithWindowsCmakeGenerator", () => {
 		});
 
 		expect(attempted).toEqual(
-			WINDOWS_CMAKE_GENERATORS.map(({ name, toolset }) => ({ name, toolset })),
+			getWindowsCmakeGeneratorAttempts().map(({ generator, toolset }) => ({
+				name: generator.name,
+				toolset,
+			})),
 		);
-		expect(clearCache).toHaveBeenCalledTimes(3);
-		expect(log).toHaveBeenCalledTimes(2);
+		expect(attempted.length).toBeGreaterThan(WINDOWS_CMAKE_GENERATORS.length);
+		expect(clearCache).toHaveBeenCalledTimes(attempted.length);
+		expect(log).toHaveBeenCalledTimes(attempted.length - 1);
 		expect(selected).toBe("Visual Studio 16 2019");
 	});
 

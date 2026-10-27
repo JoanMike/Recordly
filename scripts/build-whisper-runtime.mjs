@@ -173,9 +173,24 @@ function findCmake() {
 	return null;
 }
 
+function resolveTarCommand() {
+	// Windows ships bsdtar at System32/tar.exe, which can read both .tar.gz and
+	// .zip. A user shell may expose GNU tar first (git-bash/MSYS), and GNU tar
+	// cannot extract the official whisper.cpp .zip runtime archive, which used
+	// to fall through to a full source build and fail without CMake.
+	if (process.platform === "win32") {
+		const systemTar = path.join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe");
+		if (existsSync(systemTar)) {
+			return systemTar;
+		}
+	}
+
+	return "tar";
+}
+
 function ensureTarAvailable() {
 	try {
-		execSync("tar --version", { stdio: "pipe" });
+		execFileSync(resolveTarCommand(), ["--version"], { stdio: "pipe" });
 	} catch {
 		throw new Error("[build-whisper-runtime] tar is required to unpack whisper.cpp sources.");
 	}
@@ -279,7 +294,7 @@ async function stageWindowsX64PrebuiltRuntime(target) {
 	const prebuiltExtractRoot = path.join(cacheRoot, `prebuilt-${target.archTag}`);
 	await rm(prebuiltExtractRoot, { recursive: true, force: true });
 	await mkdir(prebuiltExtractRoot, { recursive: true });
-	execFileSync("tar", ["-xf", windowsX64ArchivePath, "-C", prebuiltExtractRoot], {
+	execFileSync(resolveTarCommand(), ["-xf", windowsX64ArchivePath, "-C", prebuiltExtractRoot], {
 		stdio: "inherit",
 	});
 
@@ -315,7 +330,7 @@ async function ensureSourceTree() {
 	}
 
 	ensureTarAvailable();
-	execFileSync("tar", ["-xzf", archivePath, "-C", extractRoot], { stdio: "inherit" });
+	execFileSync(resolveTarCommand(), ["-xzf", archivePath, "-C", extractRoot], { stdio: "inherit" });
 
 	if (!existsSync(path.join(extractedSourceDir, "CMakeLists.txt"))) {
 		throw new Error(

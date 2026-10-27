@@ -116,7 +116,7 @@ export function updateNativeHelperManifest({
 		updatedAt: new Date().toISOString(),
 	};
 
-	writeFileSync(`${manifestPath}`, `${JSON.stringify(manifest, null, 2)}\n`);
+	writeFileSync(`${manifestPath}`, `${JSON.stringify(manifest, null, "	")}\n`);
 	return manifestPath;
 }
 
