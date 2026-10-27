@@ -61,13 +61,14 @@ try {
 			await window.electronAPI.selectSource(source);
 		}, target);
 
+		const captureSystemAudio = process.env.CAPTURE_SYSTEM_AUDIO === "1";
 		const start = await page.evaluate(
-			async (source) =>
+			async ({ source, captureSystemAudio }) =>
 				window.electronAPI.startNativeScreenRecording(source, {
-					capturesSystemAudio: false,
+					capturesSystemAudio: captureSystemAudio,
 					capturesMicrophone: false,
 				}),
-			target,
+			{ source: target, captureSystemAudio },
 		);
 		log("start:", JSON.stringify(start));
 		await page.evaluate(async () => {
