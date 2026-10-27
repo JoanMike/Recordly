@@ -117,6 +117,29 @@ Verificado en esta máquina (Windows 11, VS 2026 BuildTools 18 + MSVC 14.51, Nod
 
 Pendiente de validación con la app real (GUI): overlay de cursor en el editor y el export (#503/#634), apertura del editor tras detener (#530) y export con audio (#982). El modal de bienvenida bloquea el editor cuando no hay Supabase configurado (build de desarrollo), así que esa parte hay que probarla con la build empaquetada o con una cuenta.
 
+### Modal de bienvenida (hecho)
+
+Se eliminó `OnboardingController`, el modo onboarding de `RecordlySignInDialog` (`OnboardingLayout`, `OnboardingPermissions`, `PermissionsConfetti`) y la fila "Show onboarding" de Ajustes. La app abre directo en el dashboard, sin registro; verificado con captura de la build empaquetada.
+
+### Empaquetado en Windows (hecho)
+
+- `npm run build:win` produce `release/Recordly-windows-x64.exe` (179 MB) y `release/win-unpacked`.
+- **Trampa**: electron-builder descarga `winCodeSign`, cuyo 7z contiene symlinks de macOS (`darwin/10.12/lib/*.dylib`). Sin Modo desarrollador/administrador, 7za falla con `Cannot create symbolic link ... privilegio requerido` y el build aborta en el paso de firma.
+- Workaround usado: `npx electron-builder --win nsis -c.win.signAndEditExecutable=false`. Genera el instalador, pero sin edición de icono/versión del .exe.
+- Arreglo definitivo para el usuario: activar Modo desarrollador (Configuración → Sistema → Para programadores) o correr la terminal como administrador, y volver a `npm run build:win`.
+
+### #982 (audio en el export) — en investigación
+
+- La grabación nativa de Windows deja el audio en sidecars `.system.wav` / `.mic.wav` (sin pista embebida en el mp4).
+- El plan de audio del export (`buildNativeAudioPlan`) manda al render offline (`offlineAudioProcessor.ts`) en cuanto el sidecar tiene `startDelayMs > 0`, que es el caso normal en WASAPI. Si ese render no decodifica el WAV, `prepareOfflineRender` termina en "No decodable audio sources found" o el export sale mudo sin avisar.
+- Falta reproducirlo de punta a punta: la automatización por CDP del HUD no logra disparar el botón "Grabar" (react-aria ignora clicks sintéticos y el overlay transparente se queda con el hit-testing). Siguiente intento: usar entrada real del sistema (cua) sobre la barra HUD o un proyecto `.recordly` preparado a mano.
+
+### #393/#634 (fallback de captura) — en investigación
+
+- `resolveBrowserCaptureCursorPolicy` ya distingue el fallback (`streamCursor: "always"`, cursor del SO dentro del video, overlay oculto por defecto), pero el usuario puede volver a encender el cursor del editor y quedan dos cursores.
+- Plan: marcar la sesión como "cursor quemado en el video" y bloquear el toggle de cursor para esa grabación, además de forzar WGC cuando sea posible.
+
+
 ### Requisitos de build en Windows (verificados)
 
 - Node 24.x + npm 12.
