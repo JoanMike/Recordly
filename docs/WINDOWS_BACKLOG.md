@@ -97,3 +97,29 @@
 - **Fase 4 — Optimización (P3)**.
 
 Cada fix va en su rama (`fix/...`) con commit convencional; `main` del fork se mantiene como espejo de upstream hasta que un fix esté verificado.
+
+## 5. Estado de avance
+
+### Rama `windows/stability-batch-1`
+
+Verificado en esta máquina (Windows 11, VS 2026 BuildTools 18 + MSVC 14.51, Node 24.15):
+
+| Cambio | Verificación |
+|---|---|
+| Build nativo en VS 2026 (fallback de toolset + macro de C++/WinRT) | `wgc-capture.exe` compila y se stagea |
+| `build:whisper-runtime` con bsdtar | runtime de Whisper staged (whisper-cli + DLLs) |
+| Tope de relleno de frames + audio alineado en pausa | `wgc-capture.exe` grabando 2 s + pausa 30 s + 2 s → 3,69 s de video, sin backlog |
+| Suite de tests portable en Windows | 1602 passed / 38 skipped / 0 failed (antes: 9 failed) |
+| `tsc --noEmit` | sin errores |
+| `vite build` (renderer + main + preload) | OK |
+
+Pendiente de validación con la app real (GUI): cursor en modo ventana (#503/#634), apertura del editor tras detener (#530) y export con audio (#982).
+
+### Requisitos de build en Windows (verificados)
+
+- Node 24.x + npm 12.
+- Visual Studio 2026 (BuildTools o Community) con workload **Desarrollo para el escritorio con C++**. CMake y Ninja vienen incluidos en VS; si se ejecuta desde git-bash hay que agregar
+  `.../Microsoft Visual Studio/18/BuildTools/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin` al `PATH` para `build:whisper-runtime`.
+- Python 3.11 en `PATH` (node-gyp / electron-rebuild).
+- `npm ci` puede fallar si el postinstall no encuentra CMake; en ese caso ejecutar `npm run rebuild:native` y `npm run build:platform-native-helpers` por separado.
+
