@@ -109,11 +109,13 @@ Verificado en esta máquina (Windows 11, VS 2026 BuildTools 18 + MSVC 14.51, Nod
 | Build nativo en VS 2026 (fallback de toolset + macro de C++/WinRT) | `wgc-capture.exe` compila y se stagea |
 | `build:whisper-runtime` con bsdtar | runtime de Whisper staged (whisper-cli + DLLs) |
 | Tope de relleno de frames + audio alineado en pausa | `wgc-capture.exe` grabando 2 s + pausa 30 s + 2 s → 3,69 s de video, sin backlog |
-| Suite de tests portable en Windows | 1602 passed / 38 skipped / 0 failed (antes: 9 failed) |
+| Bounds de ventana por helper nativo (sin PowerShell en bucle) | cursor fijo en el centro de una ventana 884x684 → `cx/cy = 0.5000` en 78 muestras; procesos PowerShell durante 4 s de grabación: ~16 → 0 |
+| Suite de tests portable en Windows | 1607 passed / 38 skipped / 0 failed (antes: 9 failed) |
 | `tsc --noEmit` | sin errores |
 | `vite build` (renderer + main + preload) | OK |
+| Grabación real de ventana con la app | mp4 884x684@60 + `.cursor.json`, stop correcto, sin fallback |
 
-Pendiente de validación con la app real (GUI): cursor en modo ventana (#503/#634), apertura del editor tras detener (#530) y export con audio (#982).
+Pendiente de validación con la app real (GUI): overlay de cursor en el editor y el export (#503/#634), apertura del editor tras detener (#530) y export con audio (#982). El modal de bienvenida bloquea el editor cuando no hay Supabase configurado (build de desarrollo), así que esa parte hay que probarla con la build empaquetada o con una cuenta.
 
 ### Requisitos de build en Windows (verificados)
 
