@@ -237,7 +237,16 @@ export function startWindowBoundsCapture() {
 		return;
 	}
 
+	// Seeds the value immediately in case the native helper is unavailable.
 	void refreshSelectedWindowBounds();
+
+	if (process.platform === "win32") {
+		// The native cursor monitor streams DWM bounds every ~50ms once it knows
+		// the recorded window, so polling PowerShell here only added a process
+		// spawn 4x/second and ~500ms of stale bounds while the window moved.
+		return;
+	}
+
 	setWindowBoundsCaptureInterval(
 		setInterval(() => {
 			void refreshSelectedWindowBounds();

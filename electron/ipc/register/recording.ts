@@ -1883,7 +1883,9 @@ export function registerRecordingHandlers(
 			stopCursorCapture();
 			stopInteractionCapture();
 			startWindowBoundsCapture();
-			void startNativeCursorMonitor();
+			void startNativeCursorMonitor({
+				windowHandle: parseWindowId(selectedSource?.id),
+			});
 			setIsCursorCaptureActive(true);
 			setActiveCursorSamples([]);
 			setPendingCursorSamples([]);

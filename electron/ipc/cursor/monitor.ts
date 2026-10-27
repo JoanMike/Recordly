@@ -3,6 +3,8 @@ import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import { BrowserWindow } from "electron";
 import { ensureNativeCursorMonitorBinary, getCursorMonitorExePath } from "../paths/binaries";
+import { convertPhysicalBoundsToDip } from "../windowsCaptureSelection";
+import { parseWindowBoundsLine } from "./windowBoundsLine";
 import {
 	currentCursorVisualType,
 	nativeCursorMonitorOutputBuffer,
@@ -10,8 +12,10 @@ import {
 	setCurrentCursorVisualType,
 	setNativeCursorMonitorOutputBuffer,
 	setNativeCursorMonitorProcess,
+	setSelectedWindowBounds,
 } from "../state";
 import type { CursorVisualType } from "../types";
+import { getScreen } from "../utils";
 import { recordCursorMouseDown, recordCursorMouseUp } from "./interaction";
 
 export function emitCursorStateChanged(cursorType: CursorVisualType) {
@@ -28,6 +32,23 @@ export function handleCursorMonitorStdout(chunk: Buffer) {
 	setNativeCursorMonitorOutputBuffer(lines.pop() ?? "");
 
 	for (const line of lines) {
+		const windowBounds = parseWindowBoundsLine(line);
+		if (windowBounds) {
+			if (windowBounds.kind === "missing") {
+				setSelectedWindowBounds(null);
+			} else {
+				const electronScreen = getScreen();
+				setSelectedWindowBounds(
+					typeof electronScreen.screenToDipPoint === "function"
+						? convertPhysicalBoundsToDip(windowBounds.bounds, (point) =>
+								electronScreen.screenToDipPoint(point),
+							)
+						: windowBounds.bounds,
+				);
+			}
+			continue;
+		}
+
 		const interactionMatch = line.match(/^INTERACTION:(mousedown|mouseup)(?::([123]))?$/);
 		if (interactionMatch) {
 			if (interactionMatch[1] === "mouseup") {
@@ -84,7 +105,7 @@ export function stopNativeCursorMonitor() {
 	setNativeCursorMonitorOutputBuffer("");
 }
 
-export async function startNativeCursorMonitor() {
+export async function startNativeCursorMonitor(options?: { windowHandle?: number | null }) {
 	stopNativeCursorMonitor();
 
 	if (process.platform !== "darwin" && process.platform !== "win32") {
@@ -111,9 +132,17 @@ export async function startNativeCursorMonitor() {
 		setNativeCursorMonitorOutputBuffer("");
 		setCurrentCursorVisualType("arrow");
 
+		// On Windows the same helper also streams the recorded window bounds, so
+		// the cursor overlay can follow a moving/resizing window without spawning
+		// a PowerShell process every 250ms.
+		const helperArgs =
+			process.platform === "win32" && options?.windowHandle
+				? [`--window=${options.windowHandle}`]
+				: [];
+
 		let proc: ReturnType<typeof spawn> | null;
 		try {
-			proc = spawn(helperPath, [], {
+			proc = spawn(helperPath, helperArgs, {
 				stdio: ["pipe", "pipe", "pipe"],
 			});
 		} catch (spawnError) {
