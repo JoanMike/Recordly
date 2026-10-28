@@ -42,6 +42,24 @@ export function useHudBarDrag({
 		}
 	}, [recordingHudOffset]);
 
+	// The HUD window covers the work area and the main process keeps it
+	// click-through outside the reported bar rect, polling every 40 ms. While the
+	// bar is being dragged the rect moves with the transform, so it has to be
+	// reported on every frame: with the previous 500 ms report the poller kept
+	// using the old rect, flipped the window to click-through mid-drag and the
+	// bar stopped after a few centimetres.
+	const reportHudBarBounds = useCallback(() => {
+		const bar = hudBarRef.current;
+		if (!bar) return;
+		const rect = bar.getBoundingClientRect();
+		window.electronAPI?.hudOverlaySetInteractiveBounds?.({
+			x: rect.left,
+			y: rect.top,
+			width: rect.width,
+			height: rect.height,
+		});
+	}, [hudBarRef]);
+
 	const keepHudBarInsideViewport = useCallback(() => {
 		if (isHudDraggingRef.current || !hudBarRef.current) {
 			return;
@@ -154,8 +172,9 @@ export function useHudBarDrag({
 			if (hudBarTransformRef.current) {
 				hudBarTransformRef.current.style.transform = `translate3d(${nextOffset.x}px, ${nextOffset.y}px, 0)`;
 			}
+			reportHudBarBounds();
 		});
-	}, []);
+	}, [reportHudBarBounds]);
 
 	const handleHudBarPointerUp = useCallback(
 		(event: PointerEvent<HTMLDivElement>) => {
@@ -198,6 +217,7 @@ export function useHudBarDrag({
 			isHudDraggingRef.current = false;
 			setRecordingHudOffset({ ...recordingHudOffsetRef.current });
 			setIsHudDragging(false);
+			reportHudBarBounds();
 			if (event.currentTarget.hasPointerCapture(event.pointerId)) {
 				event.currentTarget.releasePointerCapture(event.pointerId);
 			}
@@ -224,7 +244,7 @@ export function useHudBarDrag({
 				window.electronAPI?.hudOverlaySetIgnoreMouse?.(true);
 			}
 		},
-		[hudBarRef, hudContentRef, recordingWebcamPreviewContainerRef],
+		[hudBarRef, hudContentRef, recordingWebcamPreviewContainerRef, reportHudBarBounds],
 	);
 
 	useEffect(() => {

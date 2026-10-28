@@ -18,6 +18,10 @@ public static class RecordlyPickerWindows {
  [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint command);
  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
  [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
+ [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr h, int index);
+ const int GWL_EXSTYLE = -20;
+ const int WS_EX_TRANSPARENT = 0x00000020;
+ const int WS_EX_TOOLWINDOW = 0x00000080;
  [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT rect);
  [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
  [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr h, int attribute, out RECT rect, int size);
@@ -27,6 +31,11 @@ public static class RecordlyPickerWindows {
   var list = new List<Entry>(); var seen = new HashSet<long>();
   for (var h = GetTopWindow(IntPtr.Zero); h != IntPtr.Zero && seen.Add(h.ToInt64()); h = GetWindow(h, 2)) {
    if (!IsWindowVisible(h) || IsIconic(h)) continue;
+   var exStyle = GetWindowLong(h, GWL_EXSTYLE);
+   // Click-through and tool overlays (cursor overlays, HUDs, OBS helpers) are
+   // listed by Electron as ordinary windows and win the hit-test because they
+   // cover the screen; picking one records an empty, unfocusable surface.
+   if ((exStyle & WS_EX_TRANSPARENT) != 0 || (exStyle & WS_EX_TOOLWINDOW) != 0) continue;
    RECT rect;
    if (DwmGetWindowAttribute(h, 9, out rect, Marshal.SizeOf(typeof(RECT))) != 0 && !GetWindowRect(h, out rect)) continue;
    if (rect.Right <= rect.Left || rect.Bottom <= rect.Top) continue;
