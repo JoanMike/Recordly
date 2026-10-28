@@ -166,9 +166,9 @@ Prueba de 25 minutos (1500 s) a 1920x1080@60 con música en reproducción contin
 
 Los silencios que detecta `silencedetect` son pausas de 1,4-2,3 s entre canciones, no huecos digitales. Antes del arreglo del buffer, 25 s ya producían 6-10 huecos; ahora 25 min producen uno.
 
-### #508 — esquinas redondeadas en el export (sin reproducir)
+### #508 — esquinas redondeadas en el export (no aplica)
 
-Revisado el código: el radio viaja igual en preview y export (`scalePreviewBorderRadius` sobre el tamaño de salida) y el exportador nativo recibe `--radius` en píxeles. No se pudo reproducir con automatización del diálogo de exportación; falta una prueba manual: abrir una grabación, subir "Radius", exportar y mirar las esquinas.
+Con Radius ≈ 40 % en el editor, el MP4 exportado (1920x1080@60, 28,2 s) sí sale con las esquinas redondeadas: verificado sobre un frame del archivo del usuario, ampliando la esquina superior izquierda (curva continua, no ángulo recto). El radio se calcula con `scalePreviewBorderRadius` sobre el tamaño de salida y el exportador nativo lo recibe en píxeles, así que preview y export coinciden. Se cierra como no reproducible en esta versión.
 
 ### #657 — el HUD bloqueaba los clics (hecho)
 
