@@ -1,3 +1,4 @@
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -271,33 +272,39 @@ export function EditorPreviewPanel(props: Props) {
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
-					<Button
-						onClick={() => timelineRef.current?.addZoom()}
-						variant="ghost"
-						size="icon"
-						className="h-9 w-9"
-						title={t("timeline.zoom.addZoom")}
-					>
-						<MagnifyingGlassPlus className="h-4 w-4" />
-					</Button>
-					<Button
-						onClick={() => timelineRef.current?.suggestZooms()}
-						variant="ghost"
-						size="icon"
-						className="h-9 w-9"
-						title={t("timeline.zoom.suggestZooms")}
-					>
-						<MagicWand className="h-4 w-4" />
-					</Button>
-					<Button
-						onClick={() => timelineRef.current?.splitClip()}
-						variant="ghost"
-						size="icon"
-						className="h-9 w-9"
-						title={t("editor.toolbar.splitClip")}
-					>
-						<Scissors className="h-4 w-4" />
-					</Button>
+					<IconTooltip label={t("timeline.zoom.addZoom", "Agregar zoom")}>
+						<Button
+							onClick={() => timelineRef.current?.addZoom()}
+							variant="ghost"
+							size="icon"
+							className="h-9 w-9"
+							aria-label={t("timeline.zoom.addZoom", "Agregar zoom")}
+						>
+							<MagnifyingGlassPlus className="h-4 w-4" />
+						</Button>
+					</IconTooltip>
+					<IconTooltip label={t("timeline.zoom.suggestZooms", "Sugerir zooms desde el cursor")}>
+						<Button
+							onClick={() => timelineRef.current?.suggestZooms()}
+							variant="ghost"
+							size="icon"
+							className="h-9 w-9"
+							aria-label={t("timeline.zoom.suggestZooms", "Sugerir zooms desde el cursor")}
+						>
+							<MagicWand className="h-4 w-4" />
+						</Button>
+					</IconTooltip>
+					<IconTooltip label={t("editor.toolbar.splitClip", "Dividir clip en el cursor")}>
+						<Button
+							onClick={() => timelineRef.current?.splitClip()}
+							variant="ghost"
+							size="icon"
+							className="h-9 w-9"
+							aria-label={t("editor.toolbar.splitClip", "Dividir clip en el cursor")}
+						>
+							<Scissors className="h-4 w-4" />
+						</Button>
+					</IconTooltip>
 				</div>
 
 				<div className="editor-playback-center z-10 flex items-center justify-center">
@@ -305,37 +312,43 @@ export function EditorPreviewPanel(props: Props) {
 						<span className="mr-1 text-[10px] font-medium tabular-nums text-muted-foreground">
 							{formatTime(projection.timelinePlayheadTime)}
 						</span>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-9 w-9"
-							title={t("editor.playback.skipBack")}
-							onClick={playback.handlePreviewSkipBack}
-						>
-							<SkipBack className="h-3.5 w-3.5" weight="fill" />
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon"
-							className={`h-9 w-9  ${isPlaying ? "bg-foreground/10 text-foreground hover:bg-foreground/20" : "bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-white/90"} `}
-							onClick={playback.togglePlayPause}
-							title={isPlaying ? "Pause" : "Play"}
-						>
-							{isPlaying ? (
-								<Pause className="h-3.5 w-3.5" weight="fill" />
-							) : (
-								<Play className="h-3.5 w-3.5" weight="fill" />
-							)}
-						</Button>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-9 w-9"
-							title={t("editor.playback.skipForward")}
-							onClick={playback.handlePreviewSkipForward}
-						>
-							<SkipForward className="h-3.5 w-3.5" weight="fill" />
-						</Button>
+						<IconTooltip label={t("editor.playback.skipBack", "Retroceder")}>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-9 w-9"
+								aria-label={t("editor.playback.skipBack", "Retroceder")}
+								onClick={playback.handlePreviewSkipBack}
+							>
+								<SkipBack className="h-3.5 w-3.5" weight="fill" />
+							</Button>
+						</IconTooltip>
+						<IconTooltip label={isPlaying ? "Pausar" : "Reproducir"}>
+							<Button
+								variant="ghost"
+								size="icon"
+								className={`h-9 w-9  ${isPlaying ? "bg-foreground/10 text-foreground hover:bg-foreground/20" : "bg-neutral-800 text-white hover:bg-neutral-700 dark:bg-white dark:text-black dark:hover:bg-white/90"} `}
+								onClick={playback.togglePlayPause}
+								aria-label={isPlaying ? "Pausar" : "Reproducir"}
+							>
+								{isPlaying ? (
+									<Pause className="h-3.5 w-3.5" weight="fill" />
+								) : (
+									<Play className="h-3.5 w-3.5" weight="fill" />
+								)}
+							</Button>
+						</IconTooltip>
+						<IconTooltip label={t("editor.playback.skipForward", "Avanzar")}>
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-9 w-9"
+								aria-label={t("editor.playback.skipForward", "Avanzar")}
+								onClick={playback.handlePreviewSkipForward}
+							>
+								<SkipForward className="h-3.5 w-3.5" weight="fill" />
+							</Button>
+						</IconTooltip>
 						<span className="ml-1 text-[10px] font-medium tabular-nums text-muted-foreground/70">
 							{formatTime(projection.timelineDuration)}
 						</span>
@@ -348,8 +361,8 @@ export function EditorPreviewPanel(props: Props) {
 							<Button
 								variant="ghost"
 								size="icon"
-								aria-label={t("editor.playback.volume", "Preview volume")}
-								title={t("editor.playback.volume", "Preview volume")}
+								aria-label={t("editor.playback.volume", "Volumen de la vista previa")}
+								title={t("editor.playback.volume", "Volumen de la vista previa")}
 							>
 								{previewVolume <= 0.001 ? (
 									<SpeakerX className="size-3.5" />

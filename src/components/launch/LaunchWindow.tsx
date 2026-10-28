@@ -39,6 +39,7 @@ import {
 } from "./popovers/LaunchPopoverCoordinator";
 import { MicPopover } from "./popovers/MicPopover";
 import { toast } from "@/components/ui/toast";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { WebcamPopover } from "./popovers/WebcamPopover";
 import { RecordingControls } from "./RecordingControls";
 
@@ -290,16 +291,17 @@ function LaunchWindowContent() {
 		void window.electronAPI.showProjectDashboard();
 	};
 	const homeButton = (
-		<Button
-			variant="ghost"
-			size="icon"
-			iconSize="lg"
-			aria-label={t("recording.home")}
-			title={t("recording.home")}
-			onClick={openHome}
-		>
-			<House weight="fill" className="size-5" />
-		</Button>
+		<IconTooltip placement="top" label={t("recording.home", "Inicio")}>
+			<Button
+				variant="ghost"
+				size="icon"
+				iconSize="lg"
+				aria-label={t("recording.home", "Inicio")}
+				onClick={openHome}
+			>
+				<House weight="fill" className="size-5" />
+			</Button>
+		</IconTooltip>
 	);
 
 	const recordingControls = (
@@ -353,17 +355,25 @@ function LaunchWindowContent() {
 					setMicrophoneDeviceId(deviceId === "default" ? undefined : deviceId);
 				}}
 				trigger={
-					<Button
-						variant="ghost"
-						size="icon"
-						iconSize="lg"
-						title={
+					<IconTooltip
+						placement="top"
+						label={
 							microphoneEnabled
-								? t("recording.disableMicrophone")
-								: t("recording.enableMicrophone")
+								? t("recording.disableMicrophone", "Desactivar micrófono")
+								: t("recording.enableMicrophone", "Activar micrófono")
 						}
-						className={microphoneEnabled ? "text-accent" : ""}
 					>
+						<Button
+							variant="ghost"
+							size="icon"
+							iconSize="lg"
+							aria-label={
+								microphoneEnabled
+									? t("recording.disableMicrophone", "Desactivar micrófono")
+									: t("recording.enableMicrophone", "Activar micrófono")
+							}
+							className={microphoneEnabled ? "text-accent" : ""}
+						>
 						{microphoneEnabled ? (
 							<MicrophoneIcon
 								weight={microphoneEnabled ? "fill" : "regular"}
@@ -373,7 +383,8 @@ function LaunchWindowContent() {
 						) : (
 							<MicrophoneSlashIcon className="size-5" />
 						)}
-					</Button>
+						</Button>
+					</IconTooltip>
 				}
 			/>
 
@@ -397,17 +408,25 @@ function LaunchWindowContent() {
 					setWebcamDeviceId(deviceId);
 				}}
 				trigger={
-					<Button
-						variant="ghost"
-						size="icon"
-						iconSize="lg"
-						title={
+					<IconTooltip
+						placement="top"
+						label={
 							webcamEnabled
-								? t("recording.disableWebcam")
-								: t("recording.enableWebcam")
+								? t("recording.disableWebcam", "Desactivar cámara")
+								: t("recording.enableWebcam", "Activar cámara")
 						}
-						className={webcamEnabled ? "text-accent" : ""}
 					>
+						<Button
+							variant="ghost"
+							size="icon"
+							iconSize="lg"
+							aria-label={
+								webcamEnabled
+									? t("recording.disableWebcam", "Desactivar cámara")
+									: t("recording.enableWebcam", "Activar cámara")
+							}
+							className={webcamEnabled ? "text-accent" : ""}
+						>
 						{webcamEnabled ? (
 							<VideoCameraIcon
 								weight={webcamEnabled ? "fill" : "regular"}
@@ -417,7 +436,8 @@ function LaunchWindowContent() {
 						) : (
 							<VideoCameraSlashIcon className="size-5" />
 						)}
-					</Button>
+						</Button>
+					</IconTooltip>
 				}
 			/>
 
@@ -425,46 +445,52 @@ function LaunchWindowContent() {
 				countdownDelay={countdownDelay}
 				onSelectDelay={setCountdownDelay}
 				trigger={
-					<Button
-						variant="ghost"
-						size="icon"
-						iconSize="lg"
-						title={t("recording.countdownDelay")}
-						className={countdownDelay > 0 ? "text-accent" : ""}
-					>
-						<TimerIcon
-							weight={openId === "countdown" ? "fill" : "regular"}
-							className="size-5"
-						/>
-					</Button>
+					<IconTooltip placement="top" label={t("recording.countdownDelay", "Retraso de cuenta regresiva")}>
+						<Button
+							variant="ghost"
+							size="icon"
+							iconSize="lg"
+							aria-label={t("recording.countdownDelay", "Retraso de cuenta regresiva")}
+							className={countdownDelay > 0 ? "text-accent" : ""}
+						>
+							<TimerIcon
+								weight={openId === "countdown" ? "fill" : "regular"}
+								className="size-5"
+							/>
+						</Button>
+					</IconTooltip>
 				}
 			/>
 
-			<Button
-				type="button"
-				variant="destructive"
-				size="icon"
-				className={styles.electronNoDrag}
-				onClick={hasSelectedSource ? toggleRecording : () => void handlePickOnScreen()}
-				disabled={countdownActive || isPickerPending || !sourceReady}
-				title={t("recording.record")}
-			>
-				<div className={styles.recDot} />
-			</Button>
+			<IconTooltip label={t("recording.record", "Grabar")}>
+				<Button
+					type="button"
+					variant="destructive"
+					size="icon"
+					className={styles.electronNoDrag}
+					onClick={hasSelectedSource ? toggleRecording : () => void handlePickOnScreen()}
+					disabled={countdownActive || isPickerPending || !sourceReady}
+					aria-label={t("recording.record", "Grabar")}
+				>
+					<div className={styles.recDot} />
+				</Button>
+			</IconTooltip>
 
 			<Separator orientation="vertical" className="mx-[5px] h-6 self-center" />
 
 			{homeButton}
 
-			<Button
-				variant="ghost"
-				size="icon"
-				iconSize="lg"
-				onClick={() => window.electronAPI?.hudOverlayHide?.()}
-				title={t("recording.hideHud")}
-			>
-				<MinusIcon className="size-5" />
-			</Button>
+			<IconTooltip label={t("recording.hideHud", "Ocultar la barra")}>
+				<Button
+					variant="ghost"
+					size="icon"
+					iconSize="lg"
+					onClick={() => window.electronAPI?.hudOverlayHide?.()}
+					aria-label={t("recording.hideHud", "Ocultar la barra")}
+				>
+					<MinusIcon className="size-5" />
+				</Button>
+			</IconTooltip>
 
 			<Button
 				variant="ghost"
@@ -521,6 +547,8 @@ function LaunchWindowContent() {
 								onMouseLeave={handleHudMouseLeave}
 							>
 								<div
+									title={t("recording.dragHandle", "Arrastrar la barra")}
+									aria-label={t("recording.dragHandle", "Arrastrar la barra")}
 									// Linux compositors and non-passthrough Windows fallback windows
 									// need native window dragging; the JS drag path only translates
 									// content inside the HUD window.

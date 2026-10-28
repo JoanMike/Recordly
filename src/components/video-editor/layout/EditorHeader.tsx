@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/icons";
 import type { CSSProperties, FormEvent, RefObject } from "react";
 import { Button } from "@/components/ui/button";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import type { useI18n } from "@/contexts/I18nContext";
 import type { useExportDimensions } from "../export/useExportDimensions";
 import type { useExportSession } from "../export/useExportSession";
@@ -197,28 +198,30 @@ export function EditorHeader(props: Props) {
 			>
 				<div className="flex items-center gap-1">
 					<Separator orientation="vertical" className="mx-3 h-5 shrink-0 self-center" />
-					<Button
-						type="button"
-						variant="ghost"
-						onClick={handleUndo}
-						disabled={!canUndo}
-						className="inline-flex h-9 w-9 min-w-9 items-center justify-center p-0 disabled:cursor-not-allowed"
-						title={t("common.actions.undo", "Undo")}
-						aria-label={t("common.actions.undo", "Undo")}
-					>
-						<Undo2 className="h-4 w-4" />
-					</Button>
-					<Button
-						type="button"
-						variant="ghost"
-						onClick={handleRedo}
-						disabled={!canRedo}
-						className="inline-flex h-9 w-9 min-w-9 items-center justify-center p-0 disabled:cursor-not-allowed"
-						title={t("common.actions.redo", "Redo")}
-						aria-label={t("common.actions.redo", "Redo")}
-					>
-						<Redo2 className="h-4 w-4" />
-					</Button>
+					<IconTooltip label={t("common.actions.undo", "Deshacer")}>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={handleUndo}
+							disabled={!canUndo}
+							className="inline-flex h-9 w-9 min-w-9 items-center justify-center p-0 disabled:cursor-not-allowed"
+							aria-label={t("common.actions.undo", "Deshacer")}
+						>
+							<Undo2 className="h-4 w-4" />
+						</Button>
+					</IconTooltip>
+					<IconTooltip label={t("common.actions.redo", "Rehacer")}>
+						<Button
+							type="button"
+							variant="ghost"
+							onClick={handleRedo}
+							disabled={!canRedo}
+							className="inline-flex h-9 w-9 min-w-9 items-center justify-center p-0 disabled:cursor-not-allowed"
+							aria-label={t("common.actions.redo", "Rehacer")}
+						>
+							<Redo2 className="h-4 w-4" />
+						</Button>
+					</IconTooltip>
 				</div>
 				{SHOW_PRESETS_BUTTON && <EditorPresetMenu t={t} presets={presets} />}
 				<EditorExportMenu
