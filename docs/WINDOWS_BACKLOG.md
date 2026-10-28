@@ -121,6 +121,10 @@ Pendiente de validación con la app real (GUI): overlay de cursor en el editor y
 
 Se eliminó `OnboardingController`, el modo onboarding de `RecordlySignInDialog` (`OnboardingLayout`, `OnboardingPermissions`, `PermissionsConfetti`) y la fila "Show onboarding" de Ajustes. La app abre directo en el dashboard, sin registro; verificado con captura de la build empaquetada.
 
+### Superficies de cuenta y nube (hecho)
+
+Se eliminaron del producto local: sección "Shared" del dashboard, botón "Sign in" del pie del sidebar, avatar "Recordly account" del sidebar del editor, y las categorías "Account" y "Advanced" de Ajustes (con el panel de cuenta y el interruptor de actualizaciones experimentales). `tsc` limpio, 1607 tests OK.
+
 ### Grabar no hacía nada (hecho, causa raíz)
 
 Tras quitar el login, pulsar "Grabar" cerraba el HUD y dejaba el editor delante sin grabar. Causa: `preparePermissions()` en `useScreenRecorder.ts` exigía sesión de Supabase; sin sesión llamaba a `showRecordingPermissions()`, que oculta el HUD (`recordingNavigation.open(false)`) y emite `recording-permissions-requested`, un evento que ya no escucha nadie. Además `prepareRecordingStart()` usaba el mismo gate, así que tampoco arrancaba con una fuente ya elegida.
@@ -133,6 +137,11 @@ Verificado de punta a punta en la build empaquetada: Grabar sin fuente → selec
 - **Trampa**: electron-builder descarga `winCodeSign`, cuyo 7z contiene symlinks de macOS (`darwin/10.12/lib/*.dylib`). Sin Modo desarrollador/administrador, 7za falla con `Cannot create symbolic link ... privilegio requerido` y el build aborta en el paso de firma.
 - Workaround usado: `npx electron-builder --win nsis -c.win.signAndEditExecutable=false`. Genera el instalador, pero sin edición de icono/versión del .exe.
 - Arreglo definitivo para el usuario: activar Modo desarrollador (Configuración → Sistema → Para programadores) o correr la terminal como administrador, y volver a `npm run build:win`.
+
+### Desfase de audio (mitigado)
+
+El "warm start" de Windows arrancaba la captura, la pausaba para la cuenta atrás y la reanudaba: el hueco de la pausa quedaba dentro del sidecar `.system.wav` (3,2 s de `startDelayMs` o 3,14 s de silencio insertado al inicio), que es exactamente el retraso audible.
+Ahora Windows ya no hace warm start (solo macOS): la captura arranca cuando termina la cuenta atrás. Medido en la build empaquetada: `startDelayMs` 3203 → 1011 y silencio insertado 150868 → 7008 frames (0,15 s). El ~1 s restante es el arranque del dispositivo WASAPI; queda pendiente afinarlo si sigue molesto.
 
 ### #982 (audio en el export) — en investigación
 
