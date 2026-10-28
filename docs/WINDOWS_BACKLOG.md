@@ -152,6 +152,24 @@ Ahora Windows ya no hace warm start (solo macOS): la captura arranca cuando term
 
 La grabación deja el audio en sidecars `.system.wav` / `.mic.wav` y el export los mezcla; el síntoma "sale mudo" que se reportaba era en realidad el audio perdido en captura (ver cortes de silencio) más el desfase del warm start. Con ambos corregidos, el export lleva el audio del sidecar.
 
+### #736 — grabaciones largas (verificado)
+
+Prueba de 25 minutos (1500 s) a 1920x1080@60 con música en reproducción continua, usando el mismo helper nativo:
+
+| Métrica | Resultado |
+|---|---|
+| Vídeo | 1499,61 s |
+| Audio | 1499,64 s (Δ 33 ms en 25 min) |
+| `gapFillCount` | 1 |
+| `insertedSilenceFrames` | 16 400 (0,34 s en total) |
+| `dataDiscontinuityCount` | 1 |
+
+Los silencios que detecta `silencedetect` son pausas de 1,4-2,3 s entre canciones, no huecos digitales. Antes del arreglo del buffer, 25 s ya producían 6-10 huecos; ahora 25 min producen uno.
+
+### #508 — esquinas redondeadas en el export (sin reproducir)
+
+Revisado el código: el radio viaja igual en preview y export (`scalePreviewBorderRadius` sobre el tamaño de salida) y el exportador nativo recibe `--radius` en píxeles. No se pudo reproducir con automatización del diálogo de exportación; falta una prueba manual: abrir una grabación, subir "Radius", exportar y mirar las esquinas.
+
 ### #657 — el HUD bloqueaba los clics (hecho)
 
 La ventana del HUD cubre toda el área de trabajo. Ahora el renderer reporta el rect de la barra y el proceso principal sondea el cursor: click-through en el resto del escritorio, interactiva solo sobre la barra. Verificado con ratón real (`WS_EX_TRANSPARENT` alterna y "Detener" responde).
