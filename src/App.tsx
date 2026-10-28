@@ -23,6 +23,11 @@ const UpdateToastWindow = lazy(() =>
 );
 const EditorWindow = lazy(() => import("./components/video-editor/EditorWindow"));
 const CapturePicker = lazy(() => import("./components/capture-picker/CapturePicker"));
+const TeleprompterWindow = lazy(() =>
+	import("./components/teleprompter/TeleprompterWindow").then((module) => ({
+		default: module.TeleprompterWindow,
+	})),
+);
 
 export default function App() {
 	const [windowType] = useState(
@@ -84,6 +89,9 @@ export default function App() {
 			break;
 		case "capture-picker":
 			content = <CapturePicker />;
+			break;
+		case "teleprompter":
+			content = <TeleprompterWindow />;
 			break;
 		default:
 			content = (

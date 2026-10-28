@@ -1018,6 +1018,21 @@ interface Window {
 			message?: string;
 			error?: string;
 		}>;
+		openTeleprompter: () => void;
+		closeTeleprompter: () => void;
+		getTeleprompter: () => Promise<{
+			success: boolean;
+			settings: { text: string; speed: number; fontSize: number };
+		}>;
+		setTeleprompter: (patch: {
+			text?: string;
+			speed?: number;
+			fontSize?: number;
+		}) => Promise<{
+			success: boolean;
+			settings?: { text: string; speed: number; fontSize: number };
+			error?: string;
+		}>;
 		getGlobalShortcuts: () => Promise<{
 			success: boolean;
 			settings: { enabled: boolean; toggleRecording: string; pauseRecording: string };

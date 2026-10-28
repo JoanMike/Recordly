@@ -9,6 +9,7 @@ import {
 	createRecordingPreferencesStore,
 	type RecordingPreferencesPatch,
 } from "../settings/recordingPreferencesStore";
+import { readTeleprompterSettings, writeTeleprompterSettings } from "../../teleprompter";
 import {
 	applyGlobalShortcuts,
 	readGlobalShortcutSettings,
@@ -188,6 +189,21 @@ export function registerSettingsHandlers() {
 			return { success: false, error: String(error) };
 		}
 	});
+
+	ipcMain.handle("get-teleprompter", async () => {
+		return { success: true, settings: await readTeleprompterSettings() };
+	});
+
+	ipcMain.handle(
+		"set-teleprompter",
+		async (_, patch: Partial<import("../../teleprompter").TeleprompterSettings>) => {
+			try {
+				return { success: true, settings: await writeTeleprompterSettings(patch) };
+			} catch (error) {
+				return { success: false, error: String(error) };
+			}
+		},
+	);
 
 	ipcMain.handle("get-global-shortcuts", async () => {
 		return { success: true, settings: await readGlobalShortcutSettings() };

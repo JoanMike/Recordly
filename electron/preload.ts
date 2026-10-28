@@ -1081,6 +1081,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	chooseRecordingsDirectory: () => {
 		return ipcRenderer.invoke("choose-recordings-directory");
 	},
+	openTeleprompter: () => {
+		ipcRenderer.send("teleprompter-open");
+	},
+	closeTeleprompter: () => {
+		ipcRenderer.send("teleprompter-close");
+	},
+	getTeleprompter: () => {
+		return ipcRenderer.invoke("get-teleprompter");
+	},
+	setTeleprompter: (patch: { text?: string; speed?: number; fontSize?: number }) => {
+		return ipcRenderer.invoke("set-teleprompter", patch);
+	},
 	getGlobalShortcuts: () => {
 		return ipcRenderer.invoke("get-global-shortcuts");
 	},

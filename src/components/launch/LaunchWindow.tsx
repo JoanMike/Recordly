@@ -1,19 +1,22 @@
+import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { IconTooltip } from "@/components/ui/icon-tooltip";
 import {
 	ArrowClockwiseIcon,
-	House,
 	DotsThreeVerticalIcon,
+	House,
 	MicrophoneIcon,
 	MicrophoneSlashIcon,
 	MinusIcon,
 	MonitorIcon,
+	TextT as NoteIcon,
 	TimerIcon,
 	VideoCameraIcon,
 	VideoCameraSlashIcon,
 	XIcon,
 } from "@/components/ui/icons";
-import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/toast";
 import { useScopedT } from "../../contexts/I18nContext";
 import { useMicrophoneDevices } from "../../hooks/useMicrophoneDevices";
 import { useScreenRecorder } from "../../hooks/useScreenRecorder";
@@ -38,8 +41,6 @@ import {
 	useLaunchPopoverCoordinator,
 } from "./popovers/LaunchPopoverCoordinator";
 import { MicPopover } from "./popovers/MicPopover";
-import { toast } from "@/components/ui/toast";
-import { IconTooltip } from "@/components/ui/icon-tooltip";
 import { WebcamPopover } from "./popovers/WebcamPopover";
 import { RecordingControls } from "./RecordingControls";
 
@@ -374,15 +375,15 @@ function LaunchWindowContent() {
 							}
 							className={microphoneEnabled ? "text-accent" : ""}
 						>
-						{microphoneEnabled ? (
-							<MicrophoneIcon
-								weight={microphoneEnabled ? "fill" : "regular"}
-								className="size-5"
-								size={18}
-							/>
-						) : (
-							<MicrophoneSlashIcon className="size-5" />
-						)}
+							{microphoneEnabled ? (
+								<MicrophoneIcon
+									weight={microphoneEnabled ? "fill" : "regular"}
+									className="size-5"
+									size={18}
+								/>
+							) : (
+								<MicrophoneSlashIcon className="size-5" />
+							)}
 						</Button>
 					</IconTooltip>
 				}
@@ -427,15 +428,15 @@ function LaunchWindowContent() {
 							}
 							className={webcamEnabled ? "text-accent" : ""}
 						>
-						{webcamEnabled ? (
-							<VideoCameraIcon
-								weight={webcamEnabled ? "fill" : "regular"}
-								className="size-5"
-								size={18}
-							/>
-						) : (
-							<VideoCameraSlashIcon className="size-5" />
-						)}
+							{webcamEnabled ? (
+								<VideoCameraIcon
+									weight={webcamEnabled ? "fill" : "regular"}
+									className="size-5"
+									size={18}
+								/>
+							) : (
+								<VideoCameraSlashIcon className="size-5" />
+							)}
 						</Button>
 					</IconTooltip>
 				}
@@ -445,12 +446,18 @@ function LaunchWindowContent() {
 				countdownDelay={countdownDelay}
 				onSelectDelay={setCountdownDelay}
 				trigger={
-					<IconTooltip placement="top" label={t("recording.countdownDelay", "Retraso de cuenta regresiva")}>
+					<IconTooltip
+						placement="top"
+						label={t("recording.countdownDelay", "Retraso de cuenta regresiva")}
+					>
 						<Button
 							variant="ghost"
 							size="icon"
 							iconSize="lg"
-							aria-label={t("recording.countdownDelay", "Retraso de cuenta regresiva")}
+							aria-label={t(
+								"recording.countdownDelay",
+								"Retraso de cuenta regresiva",
+							)}
 							className={countdownDelay > 0 ? "text-accent" : ""}
 						>
 							<TimerIcon
@@ -461,6 +468,18 @@ function LaunchWindowContent() {
 					</IconTooltip>
 				}
 			/>
+
+			<IconTooltip placement="top" label="Teleprompter">
+				<Button
+					variant="ghost"
+					size="icon"
+					iconSize="lg"
+					aria-label="Abrir el teleprompter"
+					onClick={() => window.electronAPI?.openTeleprompter?.()}
+				>
+					<NoteIcon className="size-5" />
+				</Button>
+			</IconTooltip>
 
 			<IconTooltip label={t("recording.record", "Grabar")}>
 				<Button

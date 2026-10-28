@@ -172,6 +172,74 @@ function loadHudOverlayCaptureProtectionSetting(): boolean {
 	return hudOverlayHiddenFromCapture;
 }
 
+let teleprompterWindow: BrowserWindow | null = null;
+
+export function getTeleprompterWindow(): BrowserWindow | null {
+	return teleprompterWindow && !teleprompterWindow.isDestroyed() ? teleprompterWindow : null;
+}
+
+/**
+ * A standalone always-on-top window: reading a script needs far more room than
+ * the 160 px HUD bar, and growing the HUD would put the passthrough bounds and
+ * the drag geometry at risk.
+ */
+export function createTeleprompterWindow(): BrowserWindow {
+	const existing = getTeleprompterWindow();
+	if (existing) {
+		existing.show();
+		existing.focus();
+		return existing;
+	}
+
+	const { workArea } = getScreen().getPrimaryDisplay();
+	const width = Math.round(Math.min(900, workArea.width * 0.6));
+	const height = 320;
+	const win = new BrowserWindow({
+		width,
+		height,
+		x: Math.round(workArea.x + (workArea.width - width) / 2),
+		y: workArea.y + 80,
+		frame: false,
+		transparent: true,
+		resizable: true,
+		alwaysOnTop: true,
+		skipTaskbar: false,
+		hasShadow: false,
+		show: false,
+		backgroundColor: "#00000000",
+		webPreferences: {
+			preload: path.join(electronWindowsDir, "preload.mjs"),
+			nodeIntegration: false,
+			contextIsolation: true,
+		},
+	});
+	win.setAlwaysOnTop(true, "screen-saver");
+	// Same rule as the HUD: when recordings should not contain the overlay, the
+	// teleprompter must stay out of them too.
+	win.setContentProtection(getHudOverlayCaptureProtectionEnabled());
+	win.webContents.on("did-finish-load", () => {
+		if (!win.isDestroyed()) win.showInactive();
+	});
+	win.on("closed", () => {
+		if (teleprompterWindow === win) teleprompterWindow = null;
+	});
+	teleprompterWindow = win;
+
+	if (VITE_DEV_SERVER_URL) {
+		win.loadURL(`${VITE_DEV_SERVER_URL}?windowType=teleprompter`);
+	} else {
+		win.loadFile(path.join(RENDERER_DIST, "index.html"), {
+			query: { windowType: "teleprompter" },
+		});
+	}
+	return win;
+}
+
+export function closeTeleprompterWindow() {
+	const win = getTeleprompterWindow();
+	if (win) win.close();
+}
+
 export function getHudOverlayCaptureProtectionEnabled(): boolean {
 	return loadHudOverlayCaptureProtectionSetting();
 }
@@ -595,12 +663,21 @@ ipcMain.on("hud-overlay-set-webcam-preview-visible", (_event, visible: boolean) 
 	}
 });
 
+ipcMain.on("teleprompter-open", () => {
+	createTeleprompterWindow();
+});
+
+ipcMain.on("teleprompter-close", () => {
+	closeTeleprompterWindow();
+});
+
 ipcMain.handle("set-hud-overlay-capture-protection", (_event, enabled: boolean) => {
 	loadHudOverlayCaptureProtectionSetting();
 	hudOverlayHiddenFromCapture = Boolean(enabled);
 	persistHudOverlayCaptureProtectionSetting(hudOverlayHiddenFromCapture);
 
 	reassertHudOverlayCaptureProtection();
+	getTeleprompterWindow()?.setContentProtection(hudOverlayHiddenFromCapture);
 
 	return {
 		success: true,
