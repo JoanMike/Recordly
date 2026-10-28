@@ -208,7 +208,11 @@ bool WasapiCapture::initializeCommon() {
     hr = audioClient_->GetMixFormat(&mixFormat_);
     if (FAILED(hr)) return false;
 
-    REFERENCE_TIME bufferDuration = 200000; // 20ms
+    // A 20 ms engine buffer loses audio whenever this thread is starved by the
+    // encoder, which showed up as short holes of silence in the recording. Ask
+    // for a much larger ring; shared mode rounds it to a supported size and the
+    // reader drains it every few milliseconds anyway.
+    REFERENCE_TIME bufferDuration = 5000000; // 500ms
     hr = audioClient_->Initialize(
         AUDCLNT_SHAREMODE_SHARED,
         streamFlags_,
@@ -440,8 +444,13 @@ void WasapiCapture::captureThread() {
 
     std::vector<int16_t> pcmBuffer;
 
-    DWORD sleepMs = static_cast<DWORD>((static_cast<double>(bufferFrameCount_) / mixFormat_->nSamplesPerSec) * 500.0);
-    if (sleepMs < 5) sleepMs = 5;
+    // Poll at a quarter of the engine period (capped at 10 ms): sleeping for
+    // half the buffer left the loopback ring able to overrun under load, and
+    // every overrun showed up as a hole of silence in the recording.
+    DWORD sleepMs = static_cast<DWORD>(
+        (static_cast<double>(bufferFrameCount_) / mixFormat_->nSamplesPerSec) * 250.0);
+    if (sleepMs < 2) sleepMs = 2;
+    if (sleepMs > 10) sleepMs = 10;
 
     while (capturing_) {
         if (paused_) {

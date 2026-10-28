@@ -138,6 +138,11 @@ Verificado de punta a punta en la build empaquetada: Grabar sin fuente → selec
 - Workaround usado: `npx electron-builder --win nsis -c.win.signAndEditExecutable=false`. Genera el instalador, pero sin edición de icono/versión del .exe.
 - Arreglo definitivo para el usuario: activar Modo desarrollador (Configuración → Sistema → Para programadores) o correr la terminal como administrador, y volver a `npm run build:win`.
 
+### Cortes de silencio en el audio (hecho)
+
+Con un buffer de motor de 20 ms, el hilo de WASAPI perdía paquetes cada vez que el codificador lo dejaba sin CPU: cada pérdida se rellenaba con silencio y se oía como un corte seco (medido en una grabación real de 25 s: 10 huecos de 70-90 ms, `gapFillCount=10`, `insertedSilenceFrames=37345`).
+Ahora el buffer se pide a 500 ms y el hilo drena cada ≤10 ms. Misma prueba de 25 s: `gapFillCount=0`, `insertedSilenceFrames=0`, `dataDiscontinuityCount` 13 → 1 y ni un hueco en el WAV.
+
 ### Desfase de audio (mitigado)
 
 El "warm start" de Windows arrancaba la captura, la pausaba para la cuenta atrás y la reanudaba: el hueco de la pausa quedaba dentro del sidecar `.system.wav` (3,2 s de `startDelayMs` o 3,14 s de silencio insertado al inicio), que es exactamente el retraso audible.
