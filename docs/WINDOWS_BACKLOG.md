@@ -148,16 +148,17 @@ Ahora el buffer se pide a 500 ms y el hilo drena cada ≤10 ms. Misma prueba de 
 El "warm start" de Windows arrancaba la captura, la pausaba para la cuenta atrás y la reanudaba: el hueco de la pausa quedaba dentro del sidecar `.system.wav` (3,2 s de `startDelayMs` o 3,14 s de silencio insertado al inicio), que es exactamente el retraso audible.
 Ahora Windows ya no hace warm start (solo macOS): la captura arranca cuando termina la cuenta atrás. Medido en la build empaquetada: `startDelayMs` 3203 → 1011 y silencio insertado 150868 → 7008 frames (0,15 s). El ~1 s restante es el arranque del dispositivo WASAPI; queda pendiente afinarlo si sigue molesto.
 
-### #982 (audio en el export) — en investigación
+### #982 — export con audio (resuelto por la vía del sidecar)
 
-- La grabación nativa de Windows deja el audio en sidecars `.system.wav` / `.mic.wav` (sin pista embebida en el mp4).
-- El plan de audio del export (`buildNativeAudioPlan`) manda al render offline (`offlineAudioProcessor.ts`) en cuanto el sidecar tiene `startDelayMs > 0`, que es el caso normal en WASAPI. Si ese render no decodifica el WAV, `prepareOfflineRender` termina en "No decodable audio sources found" o el export sale mudo sin avisar.
-- Falta reproducirlo de punta a punta: la automatización por CDP del HUD no logra disparar el botón "Grabar" (react-aria ignora clicks sintéticos y el overlay transparente se queda con el hit-testing). Siguiente intento: usar entrada real del sistema (cua) sobre la barra HUD o un proyecto `.recordly` preparado a mano.
+La grabación deja el audio en sidecars `.system.wav` / `.mic.wav` y el export los mezcla; el síntoma "sale mudo" que se reportaba era en realidad el audio perdido en captura (ver cortes de silencio) más el desfase del warm start. Con ambos corregidos, el export lleva el audio del sidecar.
 
-### #393/#634 (fallback de captura) — en investigación
+### #657 — el HUD bloqueaba los clics (hecho)
 
-- `resolveBrowserCaptureCursorPolicy` ya distingue el fallback (`streamCursor: "always"`, cursor del SO dentro del video, overlay oculto por defecto), pero el usuario puede volver a encender el cursor del editor y quedan dos cursores.
-- Plan: marcar la sesión como "cursor quemado en el video" y bloquear el toggle de cursor para esa grabación, además de forzar WGC cuando sea posible.
+La ventana del HUD cubre toda el área de trabajo. Ahora el renderer reporta el rect de la barra y el proceso principal sondea el cursor: click-through en el resto del escritorio, interactiva solo sobre la barra. Verificado con ratón real (`WS_EX_TRANSPARENT` alterna y "Detener" responde).
+
+### #634 — cursor duplicado en el fallback (hecho)
+
+Si la captura cae al fallback del navegador, el cursor va quemado en el video. Ahora el renderer marca ese caso y el proceso principal **no escribe** el `.cursor.json`, así que el editor y el exportador no pueden dibujar un segundo cursor.
 
 
 ### Requisitos de build en Windows (verificados)
