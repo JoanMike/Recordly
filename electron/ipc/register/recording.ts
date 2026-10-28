@@ -37,6 +37,7 @@ import {
 	stopCursorCapture,
 	writeCursorTelemetry,
 } from "../cursor/telemetry";
+import { registerHudCrashStopHandler } from "../../hudCrashGuard";
 import { getFfmpegBinaryPath } from "../ffmpeg/binary";
 import { getMonitorHandles } from "../monitorResolver";
 import {
@@ -401,6 +402,10 @@ async function resolveExistingPath(...candidates: Array<string | null | undefine
 
 	return null;
 }
+
+// Set inside registerRecordingHandlers; exposed to the HUD crash guard so a
+// renderer crash can still finalize the capture (#1145).
+let stopNativeScreenRecordingHandler: (() => Promise<unknown>) | null = null;
 
 export function registerRecordingHandlers(
 	onRecordingStateChange?: (recording: boolean, sourceName: string) => void,
@@ -956,7 +961,9 @@ export function registerRecordingHandlers(
 		},
 	);
 
-	ipcMain.handle("stop-native-screen-recording", async () => {
+	// Extracted from the IPC entry point so the HUD crash guard can stop and
+	// finalize a recording when its renderer dies (#1145).
+	stopNativeScreenRecordingHandler = async () => {
 		const start = Date.now();
 		console.log("[PERF:MAIN] Handler: stop-native-screen-recording: STARTED");
 		try {
@@ -1303,7 +1310,12 @@ export function registerRecordingHandlers(
 				`[PERF:MAIN] Handler: stop-native-screen-recording: COMPLETED in ${Date.now() - start}ms`,
 			);
 		}
-	});
+	};
+
+	ipcMain.handle("stop-native-screen-recording", () =>
+		stopNativeScreenRecordingHandler ? stopNativeScreenRecordingHandler() : null,
+	);
+	registerHudCrashStopHandler(async () => stopNativeScreenRecordingHandler?.());
 
 	ipcMain.handle("recover-native-screen-recording", async () => {
 		if (process.platform !== "darwin") {

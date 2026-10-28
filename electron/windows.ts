@@ -1,11 +1,16 @@
 import { resolveEditorStartupView } from "./editorStartupView";
-import { currentProjectPath, currentVideoPath, currentRecordingSession } from "./ipc/state";
+import {
+	currentProjectPath,
+	currentVideoPath,
+	currentRecordingSession,
+	windowsNativeCaptureActive,
+} from "./ipc/state";
 import { isHudInEditorMode } from "./hudEditorMode";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, ipcMain, screen, type WebContents } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, screen, type WebContents } from "electron";
 import {
 	supportsHudCaptureProtection,
 	shouldProtectHudCapture,
@@ -17,6 +22,7 @@ import {
 	shouldExpandHudOverlayFallback,
 } from "./hudOverlayBounds";
 import { getHudOverlayTaskbarOptions } from "./hudOverlayWindowOptions";
+import { handleHudRendererCrash } from "./hudCrashGuard";
 import { getPackagedRendererBaseUrl } from "./rendererServer";
 
 const electronWindowsDir = path.dirname(fileURLToPath(import.meta.url));
@@ -714,6 +720,34 @@ export function createHudOverlayWindow(): BrowserWindow {
 	ipcMain.on("hud-overlay-renderer-ready", handleHudRendererReady);
 
 	hudOverlayWindow = win;
+	let hudOverlayQuitting = false;
+	app.once("before-quit", () => {
+		hudOverlayQuitting = true;
+	});
+
+	// The HUD renderer owns the stop button: if it dies mid-recording nothing
+	// would ever finalize the native capture and the take would be lost (#1145).
+	win.webContents.on("render-process-gone", (_event, details) => {
+		console.error("[hud-overlay] render-process-gone", details);
+		if (hudOverlayQuitting) return;
+		// Nothing to finalize when no native capture is running.
+		if (!windowsNativeCaptureActive) return;
+		void (async () => {
+			const result = (await handleHudRendererCrash(details.reason)) as
+				| { success?: boolean; videoPath?: string; message?: string }
+				| null;
+			if (result?.success && result.videoPath) {
+				void dialog.showMessageBox({
+					type: "info",
+					title: "Recording saved",
+					message:
+						"The recording window stopped unexpectedly. Your recording was saved before it closed.",
+					detail: result.videoPath,
+					buttons: ["OK"],
+				});
+			}
+		})();
+	});
 
 	// On Linux the HUD is dragged by the OS via -webkit-app-region (Wayland
 	// forbids client-side positioning). Mirror moved bounds into drag state.
