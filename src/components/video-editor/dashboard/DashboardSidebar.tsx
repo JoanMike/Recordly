@@ -1,4 +1,3 @@
-import { FeedbackDialog } from "@/components/feedback/FeedbackDialog";
 import { RecordNewButton } from "./RecordNewButton";
 import { SidebarCards } from "./SidebarCards";
 import { FolderRow } from "./FolderRow";
@@ -21,7 +20,6 @@ export function DashboardSidebar({
 	metadata,
 	update,
 	navClass,
-	onSignIn,
 }: Pick<
 	DashboardProps & DashboardModel,
 	| "busy"
@@ -33,7 +31,6 @@ export function DashboardSidebar({
 	| "metadata"
 	| "update"
 	| "navClass"
-	| "onSignIn"
 >) {
 	return (
 		<>
@@ -122,7 +119,6 @@ export function DashboardSidebar({
 				</div>
 				<div className="space-y-1 pt-6">
 					<SidebarCards />
-					<FeedbackDialog showLabel className={navClass(false)} onSignIn={onSignIn} />
 					<Button
 						variant="ghost"
 						className={navClass(section === "settings")}
