@@ -1670,7 +1670,11 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			const { selectedSource, useNativeMacScreenCapture, useNativeWindowsCapture, micLabel } =
 				preparedStart;
 			const useNativeCapture = useNativeMacScreenCapture || useNativeWindowsCapture;
-			const shouldWarmStartNativeCapture = useNativeCapture && countdownDelay > 0;
+			// Windows capture pauses the WASAPI loopback for the warm start, and the
+			// audio sidecar comes back with the whole countdown baked in as a start
+			// delay (audible as a few seconds of A/V drift). Keep the warm start on
+			// macOS only and let Windows run the plain countdown before capture.
+			const shouldWarmStartNativeCapture = useNativeMacScreenCapture && countdownDelay > 0;
 			if (countdownDelay > 0 && !shouldWarmStartNativeCapture) {
 				setCountdownActive(true);
 				try {
