@@ -351,7 +351,7 @@ export function useAudioPreviewSync({
 			if (isPlaying && isInRegion) {
 				enablePitchPreservingPlayback(audio);
 				const audioOffset = (currentTimeMs - startMs) / 1000;
-				if (Math.abs(audio.currentTime - audioOffset) > 0.2) {
+				if (!audio.seeking && Math.abs(audio.currentTime - audioOffset) > 0.2) {
 					audio.currentTime = audioOffset;
 				}
 				const syncedPlaybackRate = getMediaSyncPlaybackRate({
@@ -432,12 +432,17 @@ export function useAudioPreviewSync({
 				audioDuration,
 			);
 
+			// Seeking while a previous seek is still in flight makes Chromium drop
+			// the media position back and forth, which is heard as stutter.
 			const shouldSeek =
-				timelineJumped ||
-				(!isPlaying && Math.abs(audio.currentTime - targetTime) > driftThreshold) ||
-				(isPlaying && Math.abs(audio.currentTime - targetTime) > 0.9);
+				!audio.seeking &&
+				(timelineJumped ||
+					(!isPlaying && Math.abs(audio.currentTime - targetTime) > driftThreshold) ||
+					(isPlaying && Math.abs(audio.currentTime - targetTime) > 0.9));
 			if (shouldSeek) {
 				try {
+					// Pause before seeking: a seek on a playing element keeps the
+					// decoder busy and the resume below fights the new position.
 					if (!audio.paused) audio.pause();
 					audio.currentTime = targetTime;
 				} catch {
@@ -460,8 +465,14 @@ export function useAudioPreviewSync({
 							audio.play().catch(() => undefined);
 					});
 				};
-				audio.addEventListener("seeked", resume);
-				seekedListeners.push({ audio, resume });
+				if (shouldSeek || audio.seeking) {
+					// Only a pending seek needs the "seeked" handshake. Registering a
+					// fresh handler on every timeline tick piled them up by the dozen
+					// and made the preview stutter, so it is once-only and tracked for
+					// cleanup.
+					audio.addEventListener("seeked", resume, { once: true });
+					seekedListeners.push({ audio, resume });
+				}
 				resume();
 			} else if (!audio.paused) {
 				audio.pause();

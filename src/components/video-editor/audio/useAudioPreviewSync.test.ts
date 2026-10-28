@@ -187,7 +187,9 @@ describe("source preview playback ownership", () => {
 			audio.seeking = false;
 			for (const listener of seekedListeners) listener();
 			await Promise.resolve();
-			expect(audio.play).toHaveBeenCalledOnce();
+			// An element that was already playing needs no resume after the seek; a
+			// paused one does.
+			expect(audio.play).toHaveBeenCalledTimes(wasPlaying ? 0 : 1);
 			if (typeof cleanup === "function") cleanup();
 			expect(seekedListeners.size).toBe(0);
 		}
