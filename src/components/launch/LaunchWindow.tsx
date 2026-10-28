@@ -162,6 +162,38 @@ function LaunchWindowContent() {
 		recordingWebcamPreviewContainerRef,
 	});
 
+	// The HUD window spans the whole work area. Report the visible bar so the main
+	// process can keep everything else click-through while recording (#657).
+	useEffect(() => {
+		const api = window.electronAPI;
+		if (!api?.hudOverlaySetInteractiveBounds) return;
+		if (openId !== null) {
+			api.hudOverlaySetInteractiveBounds(null);
+			return;
+		}
+		const report = () => {
+			const bar = hudBarRef.current;
+			if (!bar) return;
+			const rect = bar.getBoundingClientRect();
+			api.hudOverlaySetInteractiveBounds({
+				x: rect.left,
+				y: rect.top,
+				width: rect.width,
+				height: rect.height,
+			});
+		};
+		report();
+		const observer = new ResizeObserver(report);
+		if (hudBarRef.current) observer.observe(hudBarRef.current);
+		window.addEventListener("resize", report);
+		const interval = window.setInterval(report, 500);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener("resize", report);
+			window.clearInterval(interval);
+		};
+	}, [openId]);
+
 	const { handleHudMouseEnter, handleHudMouseLeave, beginInteractiveHudAction } =
 		useLaunchHudInteractionState({
 			openId,

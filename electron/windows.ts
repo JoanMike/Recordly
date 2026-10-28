@@ -5,7 +5,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { app, BrowserWindow, ipcMain, type WebContents } from "electron";
+import { app, BrowserWindow, ipcMain, screen, type WebContents } from "electron";
 import {
 	supportsHudCaptureProtection,
 	shouldProtectHudCapture,
@@ -329,6 +329,12 @@ function setHudOverlayFallbackExpanded(expanded: boolean) {
 }
 
 function setHudOverlayMousePassthrough(ignore: boolean) {
+	// While the renderer reports interactive bounds, the cursor poll owns the
+	// passthrough state so hover heuristics cannot block the recorded app.
+	if (hudInteractiveBoundsReported) {
+		return;
+	}
+
 	hudOverlayIgnoringMouse =
 		hudOverlaySourceSelectionActive && !hudOverlayRecordingActive ? true : ignore;
 
@@ -365,6 +371,73 @@ function setHudOverlayMousePassthrough(ignore: boolean) {
 ipcMain.on("hud-overlay-set-ignore-mouse", (_event, ignore: boolean) => {
 	setHudOverlayMousePassthrough(Boolean(ignore));
 });
+
+/**
+ * The HUD window covers the whole work area, so keeping it interactive would
+ * swallow every click meant for the app being recorded (issue #657). The
+ * renderer reports the rect of the visible controls and the main process keeps
+ * the window click-through everywhere else, polling the cursor because
+ * forwarded mouse moves are not reliable on Windows.
+ */
+let hudInteractiveBounds: { x: number; y: number; width: number; height: number } | null = null;
+let hudInteractiveBoundsReported = false;
+let hudInteractivePollTimer: NodeJS.Timeout | null = null;
+let hudInteractiveLastState: boolean | null = null;
+
+function applyHudInteractiveState(interactive: boolean) {
+	const win = hudOverlayWindow;
+	if (!win || win.isDestroyed()) return;
+	if (hudInteractiveLastState === interactive) return;
+	hudInteractiveLastState = interactive;
+	hudOverlayIgnoringMouse = !interactive;
+	if (interactive) {
+		win.setIgnoreMouseEvents(false);
+		return;
+	}
+	win.setIgnoreMouseEvents(true, { forward: true });
+}
+
+function ensureHudInteractivePolling() {
+	if (hudInteractivePollTimer || !isHudOverlayMousePassthroughSupported()) return;
+	hudInteractivePollTimer = setInterval(() => {
+		const win = hudOverlayWindow;
+		if (!win || win.isDestroyed() || !win.isVisible()) return;
+		if (!hudInteractiveBoundsReported) return;
+		const bounds = hudInteractiveBounds;
+		if (!bounds) {
+			applyHudInteractiveState(true);
+			return;
+		}
+		const point = screen.getCursorScreenPoint();
+		const content = win.getContentBounds();
+		const left = content.x + bounds.x;
+		const top = content.y + bounds.y;
+		const interactive =
+			point.x >= left &&
+			point.x <= left + bounds.width &&
+			point.y >= top &&
+			point.y <= top + bounds.height;
+		applyHudInteractiveState(interactive);
+	}, 40);
+}
+
+ipcMain.on(
+	"hud-overlay-set-interactive-bounds",
+	(_event, bounds: { x: number; y: number; width: number; height: number } | null) => {
+		hudInteractiveBoundsReported = true;
+		hudInteractiveBounds =
+			bounds && bounds.width > 0 && bounds.height > 0
+				? {
+						x: Math.round(bounds.x),
+						y: Math.round(bounds.y),
+						width: Math.round(bounds.width),
+						height: Math.round(bounds.height),
+					}
+				: null;
+		hudInteractiveLastState = null;
+		ensureHudInteractivePolling();
+	},
+);
 
 ipcMain.on("hud-overlay-set-source-selection-active", (_event, active: boolean) => {
 	hudOverlaySourceSelectionActive = Boolean(active);

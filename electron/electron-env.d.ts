@@ -219,6 +219,9 @@ interface RendererExportHardwareInfo {
 interface Window {
 	electronAPI: {
 		hudOverlaySetIgnoreMouse: (ignore: boolean) => void;
+		hudOverlaySetInteractiveBounds: (
+			bounds: { x: number; y: number; width: number; height: number } | null,
+		) => void;
 		hudOverlaySetSourceSelectionActive: (active: boolean) => void;
 		hudOverlayDrag: (phase: "start" | "move" | "end", screenX: number, screenY: number) => void;
 		hudOverlayHide: () => void;
