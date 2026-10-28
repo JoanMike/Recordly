@@ -10,6 +10,10 @@ import {
 	type RecordingPreferencesPatch,
 } from "../settings/recordingPreferencesStore";
 import {
+	getRecordingsStorageUsage,
+	purgeRecordingsOlderThan,
+} from "../recording/storageMaintenance";
+import {
 	countdownInProgress,
 	countdownRemaining,
 	setCountdownInProgress,
@@ -146,6 +150,10 @@ export function registerSettingsHandlers() {
 				webcamEnabled: parsed.webcamEnabled === true,
 				webcamDeviceId:
 					typeof parsed.webcamDeviceId === "string" ? parsed.webcamDeviceId : undefined,
+				autoStopMinutes:
+					typeof parsed.autoStopMinutes === "number" ? parsed.autoStopMinutes : 0,
+				lowDiskWarnGb:
+					typeof parsed.lowDiskWarnGb === "number" ? parsed.lowDiskWarnGb : 2,
 			};
 		} catch {
 			return {
@@ -155,6 +163,8 @@ export function registerSettingsHandlers() {
 				systemAudioEnabled: false,
 				webcamEnabled: false,
 				webcamDeviceId: undefined,
+				autoStopMinutes: 0,
+				lowDiskWarnGb: 2,
 			};
 		}
 	});
@@ -169,6 +179,22 @@ export function registerSettingsHandlers() {
 			return { success: true };
 		} catch (error) {
 			console.error("Failed to save recording preferences:", error);
+			return { success: false, error: String(error) };
+		}
+	});
+
+	ipcMain.handle("get-recordings-storage-usage", async () => {
+		try {
+			return { success: true, ...(await getRecordingsStorageUsage()) };
+		} catch (error) {
+			return { success: false, error: String(error) };
+		}
+	});
+
+	ipcMain.handle("purge-old-recordings", async (_, days: number) => {
+		try {
+			return { success: true, ...(await purgeRecordingsOlderThan(days)) };
+		} catch (error) {
 			return { success: false, error: String(error) };
 		}
 	});

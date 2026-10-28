@@ -54,25 +54,38 @@ export function useEditorGlobalInteractions({
 				target instanceof HTMLTextAreaElement ||
 				target instanceof HTMLSelectElement ||
 				target?.isContentEditable;
-			const primaryModifier = isMac ? event.metaKey : event.ctrlKey;
 			const key = event.key.toLowerCase();
 
-			if (primaryModifier && !event.altKey && key === "z") {
-				if (!editable) {
-					event.preventDefault();
-					if (event.shiftKey) handleRedo();
-					else handleUndo();
-				}
+			if (editable) return;
+			if (matchesShortcut(event, shortcuts.undo, isMac)) {
+				event.preventDefault();
+				handleUndo();
 				return;
 			}
+			if (matchesShortcut(event, shortcuts.redo, isMac)) {
+				event.preventDefault();
+				handleRedo();
+				return;
+			}
+			// Ctrl+Y stays bound on Windows as a second redo, even if the user
+			// rebinds the configurable one.
 			if (!isMac && event.ctrlKey && !event.metaKey && !event.altKey && key === "y") {
-				if (!editable) {
-					event.preventDefault();
-					handleRedo();
-				}
+				event.preventDefault();
+				handleRedo();
 				return;
 			}
-			if (!matchesShortcut(event, shortcuts.playPause, isMac) || editable) return;
+			if (matchesShortcut(event, shortcuts.goToStart, isMac)) {
+				event.preventDefault();
+				videoPlaybackRef.current?.seekTimeline(0);
+				return;
+			}
+			if (matchesShortcut(event, shortcuts.goToEnd, isMac)) {
+				event.preventDefault();
+				const playback = videoPlaybackRef.current;
+				if (playback?.video) playback.seekTimeline(playback.video.duration || 0);
+				return;
+			}
+			if (!matchesShortcut(event, shortcuts.playPause, isMac)) return;
 			consumePlaybackKey(event);
 			if (event.repeat) return;
 			heldPlaybackKey.current = keyIdentity(event);

@@ -7,6 +7,10 @@ export interface RecordingPreferencesPatch {
 	systemAudioEnabled?: boolean;
 	webcamEnabled?: boolean;
 	webcamDeviceId?: string;
+	/** 0 disables the limit. */
+	autoStopMinutes?: number;
+	/** Warn when the recordings drive has less than this many GB free. */
+	lowDiskWarnGb?: number;
 }
 
 export function createRecordingPreferencesStore(filePath: string) {

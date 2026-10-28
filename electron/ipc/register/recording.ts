@@ -38,6 +38,7 @@ import {
 	writeCursorTelemetry,
 } from "../cursor/telemetry";
 import { registerHudCrashStopHandler } from "../../hudCrashGuard";
+import { startAutoStopWatch, stopAutoStopWatch } from "../recording/autoStop";
 import { getFfmpegBinaryPath } from "../ffmpeg/binary";
 import { getMonitorHandles } from "../monitorResolver";
 import {
@@ -604,6 +605,12 @@ export function registerRecordingHandlers(
 					}
 					setWindowsNativeCaptureActive(true);
 					setNativeScreenRecordingActive(true);
+					void startAutoStopWatch({
+						recordingsDir,
+						onAutoStop: () => {
+							void stopNativeScreenRecordingHandler?.();
+						},
+					});
 					recordNativeCaptureDiagnostics({
 						backend: "windows-wgc",
 						phase: "start",
@@ -1306,6 +1313,7 @@ export function registerRecordingHandlers(
 				};
 			}
 		} finally {
+			void stopAutoStopWatch();
 			console.log(
 				`[PERF:MAIN] Handler: stop-native-screen-recording: COMPLETED in ${Date.now() - start}ms`,
 			);

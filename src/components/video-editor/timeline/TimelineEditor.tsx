@@ -7,6 +7,7 @@ import type {
 } from "@/components/video-editor/audio/audioTypes";
 import { useScopedT } from "@/contexts/I18nContext";
 import { useShortcuts } from "@/contexts/ShortcutsContext";
+import { matchesShortcut } from "@/lib/shortcuts";
 import { fromFileUrl } from "../projectPersistence";
 import type {
 	AnnotationRegion,
@@ -248,6 +249,45 @@ const TimelineEditor = forwardRef<TimelineEditorHandle, TimelineEditorProps>(
 			return { previewSpans, hiddenZoomIds };
 		}, [clipRegions, liveSpanPreviewById, zoomRegions]);
 		const { shortcuts: keyShortcuts, isMac } = useShortcuts();
+
+		// Keyboard timeline zoom. Ctrl+wheel already zooms elsewhere; these keys
+		// scale the visible window around the playhead (#9).
+		useEffect(() => {
+			const zoomBy = (factor: number) => {
+				setRange((previous) => {
+					const span = Math.max(1, previous.end - previous.start);
+					const nextSpan = Math.min(totalMs || span, Math.max(1, span * factor));
+					const anchor = Math.min(
+						Math.max(currentTimeMs, previous.start),
+						previous.end,
+					);
+					const ratio = span > 0 ? (anchor - previous.start) / span : 0.5;
+					let start = anchor - nextSpan * ratio;
+					start = Math.max(0, Math.min(start, Math.max(0, totalMs - nextSpan)));
+					return { start, end: start + nextSpan };
+				});
+			};
+			const handleZoomKeys = (event: KeyboardEvent) => {
+				const target = event.target as HTMLElement | null;
+				const editable =
+					target instanceof HTMLInputElement ||
+					target instanceof HTMLTextAreaElement ||
+					target instanceof HTMLSelectElement ||
+					target?.isContentEditable;
+				if (editable || event.defaultPrevented || event.isComposing) return;
+				if (matchesShortcut(event, keyShortcuts.zoomIn, isMac)) {
+					event.preventDefault();
+					zoomBy(1 / 1.25);
+					return;
+				}
+				if (matchesShortcut(event, keyShortcuts.zoomOut, isMac)) {
+					event.preventDefault();
+					zoomBy(1.25);
+				}
+			};
+			window.addEventListener("keydown", handleZoomKeys, { capture: true });
+			return () => window.removeEventListener("keydown", handleZoomKeys, { capture: true });
+		}, [currentTimeMs, isMac, keyShortcuts.zoomIn, keyShortcuts.zoomOut, setRange, totalMs]);
 		const { peaks: sourceAudioPeaks, loading: sourceAudioLoading } = useTimelineAudioPeaks(
 			videoPath,
 			{ resourceVersion: sourceAudioResourceVersion },

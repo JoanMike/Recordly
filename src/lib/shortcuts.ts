@@ -5,6 +5,12 @@ export const SHORTCUT_ACTIONS = [
 	"addKeyframe",
 	"deleteSelected",
 	"playPause",
+	"undo",
+	"redo",
+	"goToStart",
+	"goToEnd",
+	"zoomIn",
+	"zoomOut",
 ] as const;
 
 export type ShortcutAction = (typeof SHORTCUT_ACTIONS)[number];
@@ -79,6 +85,12 @@ export const DEFAULT_SHORTCUTS: ShortcutsConfig = {
 	addKeyframe: { key: "f" },
 	deleteSelected: { key: "d", ctrl: true },
 	playPause: { key: " " },
+	undo: { key: "z", ctrl: true },
+	redo: { key: "z", ctrl: true, shift: true },
+	goToStart: { key: "home" },
+	goToEnd: { key: "end" },
+	zoomIn: { key: "=", ctrl: true },
+	zoomOut: { key: "-", ctrl: true },
 };
 
 export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
@@ -88,6 +100,12 @@ export const SHORTCUT_LABELS: Record<ShortcutAction, string> = {
 	addKeyframe: "Add Keyframe",
 	deleteSelected: "Delete Selected",
 	playPause: "Play / Pause",
+	undo: "Undo",
+	redo: "Redo",
+	goToStart: "Go to Start",
+	goToEnd: "Go to End",
+	zoomIn: "Zoom Timeline In",
+	zoomOut: "Zoom Timeline Out",
 };
 
 export function matchesShortcut(

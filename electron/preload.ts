@@ -1081,6 +1081,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	chooseRecordingsDirectory: () => {
 		return ipcRenderer.invoke("choose-recordings-directory");
 	},
+	getRecordingsStorageUsage: () => {
+		return ipcRenderer.invoke("get-recordings-storage-usage");
+	},
+	purgeOldRecordings: (days: number) => {
+		return ipcRenderer.invoke("purge-old-recordings", days);
+	},
 	getShortcuts: () => {
 		return ipcRenderer.invoke("get-shortcuts");
 	},
@@ -1132,6 +1138,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 		systemAudioEnabled?: boolean;
 		webcamEnabled?: boolean;
 		webcamDeviceId?: string;
+		autoStopMinutes?: number;
+		lowDiskWarnGb?: number;
 	}) => ipcRenderer.invoke("set-recording-preferences", prefs),
 	getCountdownDelay: () => ipcRenderer.invoke("get-countdown-delay"),
 	setCountdownDelay: (delay: number) => ipcRenderer.invoke("set-countdown-delay", delay),

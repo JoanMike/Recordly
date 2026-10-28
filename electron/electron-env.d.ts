@@ -1018,6 +1018,20 @@ interface Window {
 			message?: string;
 			error?: string;
 		}>;
+		getRecordingsStorageUsage: () => Promise<{
+			success: boolean;
+			directory?: string;
+			bytes?: number;
+			recordings?: number;
+			error?: string;
+		}>;
+		purgeOldRecordings: (days: number) => Promise<{
+			success: boolean;
+			removed?: number;
+			freedBytes?: number;
+			directory?: string;
+			error?: string;
+		}>;
 		getShortcuts: () => Promise<Record<string, unknown> | null>;
 		saveShortcuts: (shortcuts: unknown) => Promise<{ success: boolean; error?: string }>;
 		getEditorStartupView: () => "home" | "editor";
@@ -1046,6 +1060,8 @@ interface Window {
 			systemAudioEnabled: boolean;
 			webcamEnabled: boolean;
 			webcamDeviceId?: string;
+			autoStopMinutes?: number;
+			lowDiskWarnGb?: number;
 		}>;
 		getRecordingAudioLabConfig: () => Promise<{
 			browserMicrophoneProfile: string;
@@ -1057,6 +1073,8 @@ interface Window {
 			systemAudioEnabled?: boolean;
 			webcamEnabled?: boolean;
 			webcamDeviceId?: string;
+			autoStopMinutes?: number;
+			lowDiskWarnGb?: number;
 		}) => Promise<{ success: boolean; error?: string }>;
 		/** Countdown timer before recording */
 		getCountdownDelay: () => Promise<{ success: boolean; delay: number }>;
