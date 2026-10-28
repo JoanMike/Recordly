@@ -31,6 +31,7 @@ import {
 	resetCursorCaptureClock,
 	resumeCursorCapture,
 	sampleCursorPoint,
+	setCursorBurnedIntoVideo,
 	snapshotCursorTelemetryForPersistence,
 	startCursorSampling,
 	stopCursorCapture,
@@ -1967,6 +1968,10 @@ export function registerRecordingHandlers(
 				samples: [],
 			};
 		}
+	});
+
+	ipcMain.on("set-cursor-burned-into-video", (_event, value: boolean) => {
+		setCursorBurnedIntoVideo(Boolean(value));
 	});
 
 	ipcMain.handle(

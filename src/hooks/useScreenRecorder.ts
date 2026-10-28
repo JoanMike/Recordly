@@ -1105,6 +1105,7 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 
 	const prepareRecordingStart = useCallback(async () => {
 		const platform = await window.electronAPI.getPlatform();
+		window.electronAPI?.setCursorBurnedIntoVideo?.(false);
 		hideEditorOverlayCursorByDefault.current = false;
 		const selectedSource = await window.electronAPI.getSelectedSource();
 		if (!selectedSource) {
@@ -1916,6 +1917,12 @@ export function useScreenRecorder(): UseScreenRecorderReturn {
 			const browserCursorPolicy = resolveBrowserCaptureCursorPolicy({
 				nativeWindowsCaptureStartFailed,
 			});
+			// The browser stream can burn the OS cursor into the video; in that case
+			// telemetry must not be persisted or the editor/exporter draws a second
+			// cursor on top (#634).
+			window.electronAPI?.setCursorBurnedIntoVideo?.(
+				browserCursorPolicy.streamCursor === "always",
+			);
 			hideEditorOverlayCursorByDefault.current =
 				browserCursorPolicy.hideEditorOverlayCursorByDefault;
 

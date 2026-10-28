@@ -618,6 +618,7 @@ interface Window {
 			message?: string;
 			error?: string;
 		}>;
+		setCursorBurnedIntoVideo: (value: boolean) => void;
 		setCursorTelemetry: (
 			videoPath: string | undefined,
 			samples: CursorTelemetryPoint[],

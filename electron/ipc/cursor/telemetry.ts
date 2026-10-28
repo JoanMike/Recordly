@@ -266,8 +266,24 @@ export function sampleCursorPoint() {
 	pushCursorSample(point.cx, point.cy, getCursorCaptureElapsedMs(), "move");
 }
 
+let cursorBurnedIntoVideo = false;
+
+/**
+ * When the capture already contains the operating-system cursor (browser
+ * fallback with `cursor: always`), persisting telemetry would let the editor and
+ * the exporter draw a second synthetic cursor on top (issue #634).
+ */
+export function setCursorBurnedIntoVideo(value: boolean) {
+	cursorBurnedIntoVideo = Boolean(value);
+}
+
 export async function persistPendingCursorTelemetry(videoPath: string) {
 	const telemetryPath = getTelemetryPathForVideo(videoPath);
+	if (cursorBurnedIntoVideo) {
+		setPendingCursorSamples([]);
+		await fs.rm(telemetryPath, { force: true });
+		return;
+	}
 	if (pendingCursorSamples.length > 0) {
 		await fs.writeFile(
 			telemetryPath,
