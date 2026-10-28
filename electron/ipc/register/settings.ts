@@ -10,6 +10,12 @@ import {
 	type RecordingPreferencesPatch,
 } from "../settings/recordingPreferencesStore";
 import {
+	applyGlobalShortcuts,
+	readGlobalShortcutSettings,
+	writeGlobalShortcutSettings,
+	type GlobalShortcutSettings,
+} from "../../globalShortcuts";
+import {
 	getRecordingsStorageUsage,
 	purgeRecordingsOlderThan,
 } from "../recording/storageMaintenance";
@@ -179,6 +185,20 @@ export function registerSettingsHandlers() {
 			return { success: true };
 		} catch (error) {
 			console.error("Failed to save recording preferences:", error);
+			return { success: false, error: String(error) };
+		}
+	});
+
+	ipcMain.handle("get-global-shortcuts", async () => {
+		return { success: true, settings: await readGlobalShortcutSettings() };
+	});
+
+	ipcMain.handle("set-global-shortcuts", async (_, patch: Partial<GlobalShortcutSettings>) => {
+		try {
+			const settings = await writeGlobalShortcutSettings(patch);
+			const failed = applyGlobalShortcuts(settings);
+			return { success: true, settings, failed };
+		} catch (error) {
 			return { success: false, error: String(error) };
 		}
 	});

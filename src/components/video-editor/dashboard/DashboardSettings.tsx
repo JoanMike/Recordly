@@ -13,6 +13,24 @@ const formatBytes = (bytes: number) => {
 	return `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
 };
 
+const acceleratorFromEvent = (event: {
+	ctrlKey: boolean;
+	altKey: boolean;
+	shiftKey: boolean;
+	metaKey: boolean;
+	key: string;
+}): string | null => {
+	const modifiers: string[] = [];
+	if (event.ctrlKey) modifiers.push("Control");
+	if (event.altKey) modifiers.push("Alt");
+	if (event.shiftKey) modifiers.push("Shift");
+	if (event.metaKey) modifiers.push("Super");
+	if (["Control", "Alt", "Shift", "Meta"].includes(event.key)) return null;
+	if (modifiers.length === 0) return null;
+	const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+	return [...modifiers, key].join("+");
+};
+
 const numberInputClass =
 	"h-8 w-20 rounded-md border border-foreground/15 bg-transparent px-2 text-sm text-foreground";
 export function DashboardSettings({ onImportFile }: { onImportFile: () => Promise<void> }) {
@@ -25,6 +43,11 @@ export function DashboardSettings({ onImportFile }: { onImportFile: () => Promis
 	const [autoStopMinutes, setAutoStopMinutes] = useState(0);
 	const [lowDiskWarnGb, setLowDiskWarnGb] = useState(2);
 	const [storage, setStorage] = useState<{ bytes: number; recordings: number } | null>(null);
+	const [globalShortcuts, setGlobalShortcuts] = useState<{
+		enabled: boolean;
+		toggleRecording: string;
+		pauseRecording: string;
+	}>({ enabled: false, toggleRecording: "Control+Alt+R", pauseRecording: "Control+Alt+P" });
 	const [purgeDays, setPurgeDays] = useState(30);
 	const run = async (action: () => Promise<void>) => {
 		setBusy(true);
@@ -41,7 +64,8 @@ export function DashboardSettings({ onImportFile }: { onImportFile: () => Promis
 		void Promise.all([
 			window.electronAPI.getRecordingPreferences(),
 			window.electronAPI.getRecordingsStorageUsage(),
-		]).then(([prefs, usage]) => {
+			window.electronAPI.getGlobalShortcuts(),
+		]).then(([prefs, usage, shortcuts]) => {
 			if (!active) return;
 			if (prefs) {
 				if (typeof prefs.autoStopMinutes === "number") setAutoStopMinutes(prefs.autoStopMinutes);
@@ -50,6 +74,7 @@ export function DashboardSettings({ onImportFile }: { onImportFile: () => Promis
 			if (usage.success && typeof usage.bytes === "number" && typeof usage.recordings === "number") {
 				setStorage({ bytes: usage.bytes, recordings: usage.recordings });
 			}
+			if (shortcuts.success && shortcuts.settings) setGlobalShortcuts(shortcuts.settings);
 		});
 		return () => {
 			active = false;
@@ -263,6 +288,78 @@ export function DashboardSettings({ onImportFile }: { onImportFile: () => Promis
 									toast.success("Disk warning updated");
 								})
 							}
+						/>
+					</SettingsRow>
+					<SettingsRow
+						title="Global shortcuts"
+						description="Start or stop a recording without focusing Recordly."
+					>
+						<Switch
+							aria-label="Enable global shortcuts"
+							checked={globalShortcuts.enabled}
+							disabled={busy}
+							onCheckedChange={(enabled) =>
+								void run(async () => {
+									const result = await window.electronAPI.setGlobalShortcuts({
+										enabled,
+									});
+									if (!result.success) throw Error("Could not update global shortcuts");
+									if (result.settings) setGlobalShortcuts(result.settings);
+									if (result.failed?.length)
+										toast.error(
+											`Already used by another app: ${result.failed.join(", ")}`,
+										);
+								})
+							}
+						/>
+					</SettingsRow>
+					<SettingsRow
+						title="Start / stop"
+						description="Press the combination you want to use."
+					>
+						<input
+							readOnly
+							value={globalShortcuts.toggleRecording}
+							disabled={busy || !globalShortcuts.enabled}
+							aria-label="Global start stop shortcut"
+							className="h-8 w-44 rounded-md border border-foreground/15 bg-transparent px-2 text-sm text-foreground"
+							onKeyDown={(event) => {
+								const accelerator = acceleratorFromEvent(event);
+								if (!accelerator) return;
+								event.preventDefault();
+								void run(async () => {
+									const result = await window.electronAPI.setGlobalShortcuts({
+										toggleRecording: accelerator,
+									});
+									if (!result.success) throw Error("Could not save the shortcut");
+									if (result.settings) setGlobalShortcuts(result.settings);
+									if (result.failed?.length)
+										toast.error(`Already used by another app: ${result.failed.join(", ")}`);
+								});
+							}}
+						/>
+					</SettingsRow>
+					<SettingsRow title="Pause / resume" description="Toggle pause while recording.">
+						<input
+							readOnly
+							value={globalShortcuts.pauseRecording}
+							disabled={busy || !globalShortcuts.enabled}
+							aria-label="Global pause resume shortcut"
+							className="h-8 w-44 rounded-md border border-foreground/15 bg-transparent px-2 text-sm text-foreground"
+							onKeyDown={(event) => {
+								const accelerator = acceleratorFromEvent(event);
+								if (!accelerator) return;
+								event.preventDefault();
+								void run(async () => {
+									const result = await window.electronAPI.setGlobalShortcuts({
+										pauseRecording: accelerator,
+									});
+									if (!result.success) throw Error("Could not save the shortcut");
+									if (result.settings) setGlobalShortcuts(result.settings);
+									if (result.failed?.length)
+										toast.error(`Already used by another app: ${result.failed.join(", ")}`);
+								});
+							}}
 						/>
 					</SettingsRow>
 				</SettingsCategory>

@@ -1,6 +1,11 @@
 import { resolveDisplayMediaSource } from "./ipc/register/sourceMapping";
 import { createSaveBeforeCloseController } from "./saveBeforeClose";
 import { clearRecordingTrashUndo } from "./ipc/recording/library";
+import {
+	applyGlobalShortcuts,
+	readGlobalShortcutSettings,
+	unregisterGlobalShortcuts,
+} from "./globalShortcuts";
 import { pruneRecordingThumbnailCache } from "./ipc/recording/thumbnail";
 import { cleanupOrphanRecordingTempFiles } from "./tempCleanup";
 import fs from "node:fs/promises";
@@ -878,6 +883,7 @@ function createSourceSelectorWindowWrapper() {
 // explicitly with Cmd + Q.
 app.on("before-quit", () => {
 	isAppQuitting = true;
+	unregisterGlobalShortcuts();
 	authCallbacks.close();
 	void clearRecordingTrashUndo().catch((error) =>
 		console.warn("Could not clear recording undo cache", error),
@@ -932,6 +938,15 @@ app.whenReady().then(async () => {
 	if (process.platform === "win32") {
 		app.setAppUserModelId("dev.recordly.app");
 	}
+
+	// Global accelerators are opt-in: they stay off until the user enables them
+	// in Settings > Recording (#6).
+	void readGlobalShortcutSettings().then((settings) => {
+		const failed = applyGlobalShortcuts(settings);
+		if (failed.length > 0) {
+			console.warn("[global-shortcuts] could not register", failed.join(", "));
+		}
+	});
 
 	session.defaultSession.setPermissionCheckHandler(
 		(webContents, permission, requestingOrigin, details) => {

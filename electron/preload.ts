@@ -1081,6 +1081,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	chooseRecordingsDirectory: () => {
 		return ipcRenderer.invoke("choose-recordings-directory");
 	},
+	getGlobalShortcuts: () => {
+		return ipcRenderer.invoke("get-global-shortcuts");
+	},
+	setGlobalShortcuts: (patch: {
+		enabled?: boolean;
+		toggleRecording?: string;
+		pauseRecording?: string;
+	}) => {
+		return ipcRenderer.invoke("set-global-shortcuts", patch);
+	},
+	onGlobalShortcut: (callback: (action: "toggle-recording" | "pause-resume") => void) => {
+		const listener = (_event: Electron.IpcRendererEvent, action: "toggle-recording" | "pause-resume") =>
+			callback(action);
+		ipcRenderer.on("hud-global-shortcut", listener);
+		return () => ipcRenderer.removeListener("hud-global-shortcut", listener);
+	},
 	getRecordingsStorageUsage: () => {
 		return ipcRenderer.invoke("get-recordings-storage-usage");
 	},

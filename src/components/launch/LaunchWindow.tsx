@@ -113,6 +113,22 @@ function LaunchWindowContent() {
 		}
 	}, [selectedVideoDeviceId, setWebcamDeviceId]);
 
+	// Global accelerators registered by the main process (#6).
+	useEffect(() => {
+		const api = window.electronAPI;
+		if (!api?.onGlobalShortcut) return;
+		return api.onGlobalShortcut((action) => {
+			if (action === "toggle-recording") {
+				void toggleRecording();
+				return;
+			}
+			if (action === "pause-resume") {
+				if (paused) resumeRecording();
+				else pauseRecording();
+			}
+		});
+	}, [paused, pauseRecording, resumeRecording, toggleRecording]);
+
 	const {
 		showFloatingWebcamPreview,
 		setShowFloatingWebcamPreview,

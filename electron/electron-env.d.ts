@@ -1018,6 +1018,21 @@ interface Window {
 			message?: string;
 			error?: string;
 		}>;
+		getGlobalShortcuts: () => Promise<{
+			success: boolean;
+			settings: { enabled: boolean; toggleRecording: string; pauseRecording: string };
+		}>;
+		setGlobalShortcuts: (patch: {
+			enabled?: boolean;
+			toggleRecording?: string;
+			pauseRecording?: string;
+		}) => Promise<{
+			success: boolean;
+			settings?: { enabled: boolean; toggleRecording: string; pauseRecording: string };
+			failed?: string[];
+			error?: string;
+		}>;
+		onGlobalShortcut: (callback: (action: "toggle-recording" | "pause-resume") => void) => () => void;
 		getRecordingsStorageUsage: () => Promise<{
 			success: boolean;
 			directory?: string;
