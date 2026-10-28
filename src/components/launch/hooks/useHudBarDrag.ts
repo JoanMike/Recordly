@@ -110,6 +110,7 @@ export function useHudBarDrag({
 			event.currentTarget.setPointerCapture(event.pointerId);
 			isHudDraggingRef.current = true;
 			setIsHudDragging(true);
+			window.electronAPI?.hudOverlaySetDragging?.(true);
 			window.electronAPI?.hudOverlaySetIgnoreMouse?.(false);
 			if (!hudBarRef.current) {
 				return;
@@ -215,6 +216,7 @@ export function useHudBarDrag({
 			hudDragStartRef.current = null;
 			const wasDragging = isHudDraggingRef.current;
 			isHudDraggingRef.current = false;
+			window.electronAPI?.hudOverlaySetDragging?.(false);
 			setRecordingHudOffset({ ...recordingHudOffsetRef.current });
 			setIsHudDragging(false);
 			reportHudBarBounds();
@@ -248,7 +250,20 @@ export function useHudBarDrag({
 	);
 
 	useEffect(() => {
+		// A cancelled pointer (OS gesture, lost capture) must release the drag lock
+		// in the main process or the HUD would stay interactive over the whole
+		// work area.
+		const clearDragLock = () => {
+			if (!isHudDraggingRef.current) return;
+			isHudDraggingRef.current = false;
+			hudDragStartRef.current = null;
+			hudDragPendingPointerRef.current = null;
+			window.electronAPI?.hudOverlaySetDragging?.(false);
+		};
+		window.addEventListener("pointercancel", clearDragLock);
 		return () => {
+			window.removeEventListener("pointercancel", clearDragLock);
+			window.electronAPI?.hudOverlaySetDragging?.(false);
 			if (hudDragMoveRafRef.current !== null) {
 				cancelAnimationFrame(hudDragMoveRafRef.current);
 			}

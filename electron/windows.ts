@@ -387,6 +387,11 @@ ipcMain.on("hud-overlay-set-ignore-mouse", (_event, ignore: boolean) => {
  */
 let hudInteractiveBounds: { x: number; y: number; width: number; height: number } | null = null;
 let hudInteractiveBoundsReported = false;
+// While the bar is being dragged the pointer can outrun the bounds report for a
+// frame; the geometry test would flip the window to click-through and the drag
+// would die. The renderer marks the gesture so passthrough stays off until it
+// ends.
+let hudInteractiveDragActive = false;
 let hudInteractivePollTimer: NodeJS.Timeout | null = null;
 let hudInteractiveLastState: boolean | null = null;
 
@@ -409,6 +414,10 @@ function ensureHudInteractivePolling() {
 		const win = hudOverlayWindow;
 		if (!win || win.isDestroyed() || !win.isVisible()) return;
 		if (!hudInteractiveBoundsReported) return;
+		if (hudInteractiveDragActive) {
+			applyHudInteractiveState(true);
+			return;
+		}
 		const bounds = hudInteractiveBounds;
 		if (!bounds) {
 			applyHudInteractiveState(true);
@@ -426,6 +435,12 @@ function ensureHudInteractivePolling() {
 		applyHudInteractiveState(interactive);
 	}, 40);
 }
+
+ipcMain.on("hud-overlay-set-dragging", (_event, dragging: boolean) => {
+	hudInteractiveDragActive = Boolean(dragging);
+	ensureHudInteractivePolling();
+	if (hudInteractiveDragActive) applyHudInteractiveState(true);
+});
 
 ipcMain.on(
 	"hud-overlay-set-interactive-bounds",
