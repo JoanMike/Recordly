@@ -9,10 +9,39 @@ import { resolveApprovedLocalMediaPath } from "../project/manager";
 import { getRecordingsDir } from "../utils";
 
 const run = promisify(execFile);
+const THUMBNAIL_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const pending = new Map<string, Promise<string>>();
 let queue = Promise.resolve();
 
 /** Decode one small still, never a video player per library row. */
+/**
+ * Cached stills are keyed by path+mtime+size, so editing a recording leaves the
+ * old entry orphaned forever. Drop entries nobody has asked for in a month.
+ */
+export async function pruneRecordingThumbnailCache(now = Date.now()): Promise<number> {
+	const dir = path.join(app.getPath("userData"), "recording-thumbnails");
+	let entries;
+	try {
+		entries = await fs.readdir(dir, { withFileTypes: true });
+	} catch {
+		return 0;
+	}
+	let removed = 0;
+	for (const entry of entries) {
+		if (!entry.isFile()) continue;
+		const file = path.join(dir, entry.name);
+		try {
+			const stat = await fs.stat(file);
+			if (now - stat.mtimeMs < THUMBNAIL_MAX_AGE_MS) continue;
+			await fs.rm(file, { force: true });
+			removed += 1;
+		} catch {
+			// Ignore files that vanished or are locked.
+		}
+	}
+	return removed;
+}
+
 export async function getRecordingThumbnail(candidate: string): Promise<string> {
 	const root = await fs.realpath(await getRecordingsDir());
 	const file = await resolveApprovedLocalMediaPath(candidate);

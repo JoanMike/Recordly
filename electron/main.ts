@@ -1,6 +1,7 @@
 import { resolveDisplayMediaSource } from "./ipc/register/sourceMapping";
 import { createSaveBeforeCloseController } from "./saveBeforeClose";
 import { clearRecordingTrashUndo } from "./ipc/recording/library";
+import { pruneRecordingThumbnailCache } from "./ipc/recording/thumbnail";
 import { cleanupOrphanRecordingTempFiles } from "./tempCleanup";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -891,6 +892,9 @@ app.on("before-quit", () => {
 	void cleanupOrphanRecordingTempFiles(app.getPath("temp"), {
 		minAgeMs: 60 * 60 * 1000,
 	}).catch((error) => console.warn("Could not clean orphan capture temp files", error));
+	void pruneRecordingThumbnailCache().catch((error) =>
+		console.warn("Could not prune the recording thumbnail cache", error),
+	);
 });
 
 app.on("window-all-closed", () => {

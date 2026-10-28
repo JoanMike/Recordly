@@ -408,32 +408,65 @@ function applyHudInteractiveState(interactive: boolean) {
 	win.setIgnoreMouseEvents(true, { forward: true });
 }
 
+// Polling the cursor wakes the process on every tick, so the idle rate is much
+// slower than the rate used while the pointer is already on the controls.
+const HUD_POLL_ACTIVE_MS = 40;
+const HUD_POLL_IDLE_MS = 140;
+// Approaching the bar must still feel instant: inside this margin the fast rate
+// applies even before the pointer reaches the controls.
+const HUD_POLL_NEAR_MARGIN_PX = 160;
+let hudInteractiveNear = false;
+
+function pollHudInteractiveOnce(): boolean {
+	const win = hudOverlayWindow;
+	if (!win || win.isDestroyed() || !win.isVisible()) return false;
+	if (!hudInteractiveBoundsReported) return true;
+	if (hudInteractiveDragActive) {
+		applyHudInteractiveState(true);
+		return true;
+	}
+	const bounds = hudInteractiveBounds;
+	if (!bounds) {
+		applyHudInteractiveState(true);
+		return true;
+	}
+	const point = screen.getCursorScreenPoint();
+	const content = win.getContentBounds();
+	const left = content.x + bounds.x;
+	const top = content.y + bounds.y;
+	const interactive =
+		point.x >= left &&
+		point.x <= left + bounds.width &&
+		point.y >= top &&
+		point.y <= top + bounds.height;
+	hudInteractiveNear =
+		point.x >= left - HUD_POLL_NEAR_MARGIN_PX &&
+		point.x <= left + bounds.width + HUD_POLL_NEAR_MARGIN_PX &&
+		point.y >= top - HUD_POLL_NEAR_MARGIN_PX &&
+		point.y <= top + bounds.height + HUD_POLL_NEAR_MARGIN_PX;
+	applyHudInteractiveState(interactive);
+	return true;
+}
+
+function scheduleHudInteractivePoll() {
+	if (hudInteractivePollTimer) return;
+	const delay =
+		hudInteractiveLastState === true || hudInteractiveNear ? HUD_POLL_ACTIVE_MS : HUD_POLL_IDLE_MS;
+	hudInteractivePollTimer = setTimeout(() => {
+		hudInteractivePollTimer = null;
+		if (pollHudInteractiveOnce()) scheduleHudInteractivePoll();
+	}, delay);
+}
+
 function ensureHudInteractivePolling() {
-	if (hudInteractivePollTimer || !isHudOverlayMousePassthroughSupported()) return;
-	hudInteractivePollTimer = setInterval(() => {
-		const win = hudOverlayWindow;
-		if (!win || win.isDestroyed() || !win.isVisible()) return;
-		if (!hudInteractiveBoundsReported) return;
-		if (hudInteractiveDragActive) {
-			applyHudInteractiveState(true);
-			return;
-		}
-		const bounds = hudInteractiveBounds;
-		if (!bounds) {
-			applyHudInteractiveState(true);
-			return;
-		}
-		const point = screen.getCursorScreenPoint();
-		const content = win.getContentBounds();
-		const left = content.x + bounds.x;
-		const top = content.y + bounds.y;
-		const interactive =
-			point.x >= left &&
-			point.x <= left + bounds.width &&
-			point.y >= top &&
-			point.y <= top + bounds.height;
-		applyHudInteractiveState(interactive);
-	}, 40);
+	if (!isHudOverlayMousePassthroughSupported()) return;
+	scheduleHudInteractivePoll();
+}
+
+function stopHudInteractivePolling() {
+	if (!hudInteractivePollTimer) return;
+	clearTimeout(hudInteractivePollTimer);
+	hudInteractivePollTimer = null;
 }
 
 ipcMain.on("hud-overlay-set-dragging", (_event, dragging: boolean) => {
@@ -800,6 +833,7 @@ export function createHudOverlayWindow(): BrowserWindow {
 	screen.on("display-metrics-changed", handleDisplayMetricsChanged);
 
 	win.on("closed", () => {
+		stopHudInteractivePolling();
 		ipcMain.removeListener("hud-overlay-renderer-ready", handleHudRendererReady);
 		screen.removeListener("display-removed", handleDisplayRemoved);
 		screen.removeListener("display-metrics-changed", handleDisplayMetricsChanged);
