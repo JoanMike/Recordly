@@ -121,6 +121,12 @@ Pendiente de validación con la app real (GUI): overlay de cursor en el editor y
 
 Se eliminó `OnboardingController`, el modo onboarding de `RecordlySignInDialog` (`OnboardingLayout`, `OnboardingPermissions`, `PermissionsConfetti`) y la fila "Show onboarding" de Ajustes. La app abre directo en el dashboard, sin registro; verificado con captura de la build empaquetada.
 
+### Grabar no hacía nada (hecho, causa raíz)
+
+Tras quitar el login, pulsar "Grabar" cerraba el HUD y dejaba el editor delante sin grabar. Causa: `preparePermissions()` en `useScreenRecorder.ts` exigía sesión de Supabase; sin sesión llamaba a `showRecordingPermissions()`, que oculta el HUD (`recordingNavigation.open(false)`) y emite `recording-permissions-requested`, un evento que ya no escucha nadie. Además `prepareRecordingStart()` usaba el mismo gate, así que tampoco arrancaba con una fuente ya elegida.
+Ahora el gate es el permiso real del SO: Windows no necesita ninguno y macOS mantiene los chequeos de pantalla/accesibilidad.
+Verificado de punta a punta en la build empaquetada: Grabar sin fuente → selector de ventanas → elegir ventana → Grabar → cuenta atrás 3 s → cronómetro en el HUD → Detener → editor con el mp4 (1920x1032, 47,58 s, 19 MB).
+
 ### Empaquetado en Windows (hecho)
 
 - `npm run build:win` produce `release/Recordly-windows-x64.exe` (179 MB) y `release/win-unpacked`.
