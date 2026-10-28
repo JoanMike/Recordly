@@ -160,6 +160,17 @@ static bool parseSimpleJson(const std::string& json, CaptureConfig& config) {
     return true;
 }
 
+static std::string wideToUtf8(const std::wstring& wstr) {
+    if (wstr.empty()) return "";
+    const int len = WideCharToMultiByte(
+        CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()), nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return "";
+    std::string str(static_cast<size_t>(len), '\0');
+    WideCharToMultiByte(
+        CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()), str.data(), len, nullptr, nullptr);
+    return str;
+}
+
 static std::wstring utf8ToWide(const std::string& str) {
     if (str.empty()) return L"";
     int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), nullptr, 0);
@@ -300,7 +311,9 @@ static void stdinListenerThread() {
     g_stopCv.notify_all();
 }
 
-int main(int argc, char* argv[]) {
+// wmain so the JSON config keeps non-ASCII window titles and paths intact; the
+// ANSI entry point mangles them before they reach the parser.
+int wmain(int argc, wchar_t* argv[]) {
     if (argc < 2) {
         std::cerr << "ERROR: Missing JSON config argument" << std::endl;
         return 1;
@@ -313,7 +326,8 @@ int main(int argc, char* argv[]) {
     winrt::init_apartment(winrt::apartment_type::multi_threaded);
 
     CaptureConfig config;
-    if (!parseSimpleJson(argv[1], config)) {
+    const std::string configJson = wideToUtf8(argv[1]);
+    if (!parseSimpleJson(configJson, config)) {
         std::cerr << "ERROR: Failed to parse config JSON" << std::endl;
         return 1;
     }

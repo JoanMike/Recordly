@@ -170,6 +170,12 @@ Los silencios que detecta `silencedetect` son pausas de 1,4-2,3 s entre cancione
 
 Con Radius ≈ 40 % en el editor, el MP4 exportado (1920x1080@60, 28,2 s) sí sale con las esquinas redondeadas: verificado sobre un frame del archivo del usuario, ampliando la esquina superior izquierda (curva continua, no ángulo recto). El radio se calcula con `scalePreviewBorderRadius` sobre el tamaño de salida y el exportador nativo lo recibe en píxeles, así que preview y export coinciden. Se cierra como no reproducible en esta versión.
 
+### #1153 — nombres con acentos en el helper de captura (hecho, tomado del PR #1153)
+
+`wgc-capture.exe` usaba `main(int, char* argv[])`, así que Windows convertía el JSON de configuración a la página ANSI antes de que llegara al parser: cualquier ruta con `ñ`, acentos o CJK se corrompía y la grabación fallaba con `MFCreateSinkWriterFromURL failed: 0x80070003`.
+
+Ahora usa `wmain(int, wchar_t* argv[])` + `wideToUtf8()`, y el parser recibe UTF-8 real. Verificado con `grabación-ñ.mp4` dentro de `prueba-ñandú-español`: el binario anterior falla con 0x80070003 y el nuevo graba el archivo con el nombre correcto. `recordly-gpu-export.exe` ya usaba `wmain`; `cursor-monitor.exe` solo recibe `--window=<hwnd>`.
+
 ### #657 — el HUD bloqueaba los clics (hecho)
 
 La ventana del HUD cubre toda el área de trabajo. Ahora el renderer reporta el rect de la barra y el proceso principal sondea el cursor: click-through en el resto del escritorio, interactiva solo sobre la barra. Verificado con ratón real (`WS_EX_TRANSPARENT` alterna y "Detener" responde).
