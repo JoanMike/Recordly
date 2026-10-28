@@ -27,7 +27,12 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { useI18n } from "@/contexts/I18nContext";
-import { ASPECT_RATIOS, type AspectRatio, getAspectRatioLabel } from "@/utils/aspectRatioUtils";
+import {
+	ASPECT_RATIOS,
+	type AspectRatio,
+	getAspectRatioDescription,
+	getAspectRatioLabel,
+} from "@/utils/aspectRatioUtils";
 import type { useVideoEditorAudio } from "../audio/useVideoEditorAudio";
 import type { CaptionEditTarget } from "../captionEditing";
 import type { useAnnotationRegionCommands } from "../hooks/useAnnotationRegionCommands";
@@ -143,7 +148,14 @@ export function EditorPreviewPanel(props: Props) {
 										onClick={() => setAspectRatio(ratio)}
 										className="flex cursor-pointer items-center justify-between gap-3 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
 									>
-										<span>{getAspectRatioLabel(ratio)}</span>
+										<span className="flex min-w-0 flex-col">
+											<span>{getAspectRatioLabel(ratio)}</span>
+											{getAspectRatioDescription(ratio) ? (
+												<span className="text-[10px] leading-tight text-muted-foreground/70">
+													{getAspectRatioDescription(ratio)}
+												</span>
+											) : null}
+										</span>
 										{aspectRatio === ratio ? (
 											<Check className="h-3 w-3 text-[#2563EB]" />
 										) : null}

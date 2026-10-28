@@ -82,6 +82,22 @@ export function getAspectRatioDimensions(
 	};
 }
 
+const ASPECT_RATIO_DESCRIPTIONS: Record<string, string> = {
+	native: "Como la grabación, sin recortar",
+	"16:9": "YouTube, web y presentaciones",
+	"9:16": "Reels, Shorts y TikTok",
+	"1:1": "Publicación cuadrada (Instagram)",
+	"4:3": "Pantallas antiguas y diapositivas 4:3",
+	"4:5": "Retrato para el feed de Instagram",
+	"16:10": "Pantallas de portátil 16:10",
+	"10:16": "Vertical estrecho para móvil",
+};
+
+/** Short hint so each ratio says what it is for, not just its numbers. */
+export function getAspectRatioDescription(aspectRatio: AspectRatio): string | null {
+	return ASPECT_RATIO_DESCRIPTIONS[aspectRatio] ?? null;
+}
+
 export function getAspectRatioLabel(aspectRatio: AspectRatio): string {
 	if (aspectRatio === "native") {
 		return "Native";
