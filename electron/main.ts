@@ -1,6 +1,7 @@
 import { resolveDisplayMediaSource } from "./ipc/register/sourceMapping";
 import { createSaveBeforeCloseController } from "./saveBeforeClose";
 import { clearRecordingTrashUndo } from "./ipc/recording/library";
+import { cleanupOrphanRecordingTempFiles } from "./tempCleanup";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -884,6 +885,12 @@ app.on("before-quit", () => {
 	showCursor();
 	cleanupNativeVideoExportSessions();
 	void cleanupAllExportStreams();
+	// Native captures that never reached the recordings folder (crash, killed
+	// process) stay in the temp dir forever otherwise (#1053). Only old files are
+	// removed so a capture that is still being finalized is left alone.
+	void cleanupOrphanRecordingTempFiles(app.getPath("temp"), {
+		minAgeMs: 60 * 60 * 1000,
+	}).catch((error) => console.warn("Could not clean orphan capture temp files", error));
 });
 
 app.on("window-all-closed", () => {
