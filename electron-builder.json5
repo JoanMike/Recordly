@@ -10,7 +10,7 @@
     "node_modules/uiohook-napi/**",
     "electron/native/bin/**"
   ],
-  "productName": "Recordly",
+  "productName": "Recordly Local",
   "protocols": [
     {
       "name": "Recordly authentication",
@@ -52,7 +52,7 @@
   "publish": [
     {
       "provider": "github",
-      "owner": "webadderall",
+      "owner": "JoanMike",
       "repo": "Recordly",
       "tagNamePrefix": "v",
       "publishAutoUpdate": true
@@ -117,14 +117,14 @@
       "nsis"
     ],
     "icon": "icons/icons/win/icon.ico",
-    "executableName": "Recordly",
-    "artifactName": "${productName}-windows-${arch}.${ext}"
+    "executableName": "Recordly Local",
+    "artifactName": "Recordly-Local-${version}-windows-${arch}.${ext}"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "Recordly"
+    "shortcutName": "Recordly Local"
   }
 }
